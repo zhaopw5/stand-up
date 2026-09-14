@@ -325,7 +325,7 @@ class WorkBuddy(QWidget):
         self.time.setAlignment(Qt.AlignmentFlag.AlignCenter)
         top.addWidget(self.time, 1)
         self.duration = ChoiceBox(objectName='duration')
-        self.duration.addItems(['15', '30', '45'])
+        self.duration.addItems(['15', '30', '45', '60'])
         self.duration.setCurrentText('30')
         self.duration.setEditable(True)
         self.duration.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
@@ -690,3 +690,4 @@ if __name__ == '__main__':
     window = WorkBuddy()
     window.show()
     sys.exit(app.exec())
+

@@ -197,6 +197,7 @@ class WorkBuddy(QWidget):
         icon_name = 'app-icon.png' if sys.platform == 'darwin' else 'app-icon.ico'
         self.setWindowIcon(QIcon(str(Path(__file__).resolve().parent / 'assets' / icon_name)))
         self.remaining = 1800
+        self.countdown_started = False
         self.list_visible = True
         self.compact_mode = False
         self.pinned = False
@@ -330,18 +331,17 @@ class WorkBuddy(QWidget):
         self.duration.lineEdit().setPlaceholderText('分钟')
         self.duration.setFixedSize(108, 50)
         self.duration.setStyleSheet('QComboBox { padding: 6px 4px; } QLineEdit { padding: 0px; border: none; background: transparent; }')
-        self.duration.setToolTip('输入 1～999 分钟，或选择 15 / 30 / 45 分钟，再点击应用时长')
+        self.duration.setToolTip('输入 1～999 分钟。开始新一轮或重置时使用；暂停后继续会保留剩余时间。')
         self.duration.setAccessibleName('倒计时时长，单位分钟，可直接输入')
         top.addWidget(self.duration)
-        self.apply_button = self.button('应用时长', self.apply, 'apply')
-        self.apply_button.setFixedHeight(50)
-        top.addWidget(self.apply_button)
+        top.addWidget(QLabel('分钟'))
         panel_layout.addLayout(top)
         self.timer_controls = QWidget()
         controls = QHBoxLayout(self.timer_controls)
         controls.setContentsMargins(0, 0, 0, 0)
         controls.setSpacing(10)
-        controls.addWidget(self.button('开始', self.start_timer, 'primary'))
+        self.start_button = self.button('开始', self.start_timer, 'primary')
+        controls.addWidget(self.start_button)
         controls.addWidget(self.button('暂停', self.pause_timer))
         controls.addWidget(self.button('重置', self.reset, 'quiet'))
         panel_layout.addWidget(self.timer_controls)
@@ -445,6 +445,8 @@ class WorkBuddy(QWidget):
         self.list.viewport().update()
 
     def next_track(self, status):
+        if self.alarm_active:
+            return
         if status != QMediaPlayer.MediaStatus.EndOfMedia or not self.list.count():
             return
         if self.mode.currentText() == '单曲循环':
@@ -471,7 +473,11 @@ class WorkBuddy(QWidget):
         self.resize(self.width(), 460 if self.list_visible else 330)
 
     def start_timer(self):
+        if not self.countdown_started or self.remaining == 0:
+            if not self.reset():
+                return
         if self.remaining > 0:
+            self.countdown_started = True
             self.timer.start(1000)
         self.sync_timer_button()
 
@@ -494,6 +500,9 @@ class WorkBuddy(QWidget):
         button.setToolTip(label)
         button.setAccessibleName(label)
         button.update()
+        self.start_button.setEnabled(not self.timer.isActive())
+        self.start_button.setText('计时中' if self.timer.isActive() else
+                                  '继续' if self.countdown_started and self.remaining > 0 else '开始')
 
     def apply(self):
         if not self.timer.isActive():
@@ -501,12 +510,15 @@ class WorkBuddy(QWidget):
             if not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 999:
                 QMessageBox.information(self, '请输入有效时长', '请输入 1～999 的整数分钟，例如 5、100 或 999。')
                 self.duration.setFocus()
-                return
+                return False
             self.remaining = int(value) * 60
+            self.countdown_started = False
             self.stop_alarm()
             self.sync_timer_button()
             self.update_time()
             self.setWindowTitle('stand up')
+            return True
+        return False
 
     def update_time(self):
         self.time.setText(f'{self.remaining // 60:02d}:{self.remaining % 60:02d}')
@@ -521,6 +533,8 @@ class WorkBuddy(QWidget):
             self.sync_timer_button()
             self.setWindowTitle('stand up - 时间到了，请起身活动')
             if was_running_down:
+                # 先暂停背景音乐并保留进度，再播放提醒，避免两路声音混在一起。
+                self.player.pause()
                 self.alarm_active = True
                 self.chime.play()
                 self.sync_timer_button()
@@ -532,8 +546,9 @@ class WorkBuddy(QWidget):
     def reset(self):
         self.stop_alarm()
         self.timer.stop()
-        self.apply()
+        applied = self.apply()
         self.sync_timer_button()
+        return applied
 
     def compact(self):
         position = self.pos()

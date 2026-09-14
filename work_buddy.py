@@ -121,8 +121,8 @@ class MiniPanel(QWidget):
         self.music_button.setCheckable(True)
         self.reset_button = MiniButton('reset', '重置倒计时', buddy.reset, self)
         for button, x, y in ((self.restore, 5, 4), (self.pin_button, 86, 4),
-                             (self.pause_button, 5, 46), (self.music_button, 45, 49),
-                             (self.reset_button, 86, 46)):
+                             (self.pause_button, 5, 49), (self.music_button, 45, 49),
+                             (self.reset_button, 86, 49)):
             button.setGeometry(x, y, 22, 16)
 
     def mousePressEvent(self, event):

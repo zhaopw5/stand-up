@@ -28,6 +28,7 @@ jobs:
         run: |
           python tests/smoke_desktop.py
           python tests/test_timer_flow.py
+          python tests/test_music_controls.py
       - name: Build native app
         run: python scripts/build_macos.py
       - name: Verify bundle launch and resources

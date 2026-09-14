@@ -7,7 +7,7 @@ from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPainter
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PySide6.QtWidgets import (QApplication, QComboBox, QFileDialog, QFrame,
     QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton, QStyle,
-    QStyledItemDelegate, QVBoxLayout, QWidget, QMessageBox)
+    QStyledItemDelegate, QVBoxLayout, QWidget, QMessageBox, QSlider)
 
 NUMBER_FONT = 'Helvetica Neue' if sys.platform == 'darwin' else 'Segoe UI'
 
@@ -375,12 +375,34 @@ class WorkBuddy(QWidget):
         self.list.itemDoubleClicked.connect(lambda item: self.play_music())
         playlist_layout.addWidget(self.list, 1)
         layout.addWidget(self.playlist_section, 1)
+        self.music_status = QLabel('尚未播放背景音乐')
+        self.music_status.setStyleSheet('font-size:12px;color:#777777;')
+        self.music_status.setWordWrap(True)
+        layout.addWidget(self.music_status)
+        progress = QHBoxLayout()
+        self.elapsed = QLabel('00:00')
+        self.total = QLabel('00:00')
+        self.seek = QSlider(Qt.Orientation.Horizontal)
+        self.seek.setRange(0, 0)
+        self.seek.setEnabled(False)
+        self.seek.setAccessibleName('背景音乐播放进度')
+        self.seek.setStyleSheet('QSlider::groove:horizontal {height:4px;background:#dddddd;border-radius:2px;} QSlider::sub-page:horizontal {background:#888888;border-radius:2px;} QSlider::handle:horizontal {width:12px;margin:-4px 0;background:#666666;border-radius:6px;}')
+        self.seek.sliderMoved.connect(lambda value: self.elapsed.setText(self.format_music_time(value)))
+        self.seek.sliderReleased.connect(lambda: self.player.setPosition(self.seek.value()))
+        self.seek.actionTriggered.connect(lambda action: self.player.setPosition(self.seek.sliderPosition()) if not self.seek.isSliderDown() else None)
+        self.player.positionChanged.connect(self.update_music_position)
+        self.player.durationChanged.connect(self.update_music_duration)
+        self.player.seekableChanged.connect(lambda value: self.seek.setEnabled(value and self.player.duration() > 0))
+        self.player.errorOccurred.connect(self.music_error)
+        progress.addWidget(self.elapsed)
+        progress.addWidget(self.seek, 1)
+        progress.addWidget(self.total)
+        layout.addLayout(progress)
         bottom = QHBoxLayout()
         self.bottom_layout = bottom
         bottom.setSpacing(8)
-        self.play = self.button('播放', self.play_music, 'primary')
+        self.play = self.button('播放', self.toggle_selected_music, 'primary')
         bottom.addWidget(self.play)
-        bottom.addWidget(self.button('暂停', self.player.pause))
         bottom.addStretch()
         self.mode = ChoiceBox(objectName='mode')
         self.mode.addItems(['顺序播放', '单曲循环', '列表循环'])
@@ -395,7 +417,10 @@ class WorkBuddy(QWidget):
     def choose(self):
         paths, _ = QFileDialog.getOpenFileNames(
             self, '添加背景音乐', '', '音乐文件 (*.mp3 *.wav *.ogg *.m4a)')
+        first = self.list.count()
         self.add_tracks(paths)
+        if paths:
+            self.list.setCurrentRow(first)
 
     def add_tracks(self, paths):
         # 完整路径跟随列表项移动，避免同名歌曲排序后指向错误文件。
@@ -415,6 +440,35 @@ class WorkBuddy(QWidget):
         button.setToolTip(label)
         button.setAccessibleName(label)
         button.update()
+        self.play.setText('暂停' if playing else '播放')
+
+    @staticmethod
+    def format_music_time(milliseconds):
+        seconds = max(0, milliseconds // 1000)
+        return f'{seconds // 60:02d}:{seconds % 60:02d}'
+
+    def update_music_position(self, position):
+        if not self.seek.isSliderDown():
+            self.seek.setValue(position)
+            self.elapsed.setText(self.format_music_time(position))
+
+    def update_music_duration(self, duration):
+        self.seek.setRange(0, max(0, duration))
+        self.total.setText(self.format_music_time(duration))
+        self.seek.setEnabled(duration > 0 and self.player.isSeekable())
+
+    def music_error(self, *args):
+        self.music_status.setText('播放失败：' + (self.player.errorString() or '无法读取此音频文件'))
+        self.music_status.setToolTip(self.player.source().toLocalFile())
+        self.sync_music_button()
+
+    def toggle_selected_music(self):
+        item = self.list.currentItem()
+        selected = QUrl.fromLocalFile(item.data(Qt.ItemDataRole.UserRole)) if item else QUrl()
+        if not selected.isEmpty() and selected != self.player.source():
+            self.play_music()
+        else:
+            self.toggle_music()
 
     def toggle_music(self):
         if self.player.playbackState() == QMediaPlayer.PlaybackState.PlayingState:
@@ -432,6 +486,11 @@ class WorkBuddy(QWidget):
         if item is None:
             return
         source = QUrl.fromLocalFile(item.data(Qt.ItemDataRole.UserRole))
+        if not Path(source.toLocalFile()).is_file():
+            self.music_status.setText('播放失败：文件不存在，请重新添加歌曲。')
+            return
+        self.music_status.setText('当前音乐：' + item.text())
+        self.music_status.setToolTip(source.toLocalFile())
         if source != self.player.source():
             self.player.setSource(source)
         self.player.play()

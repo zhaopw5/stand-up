@@ -14,3 +14,4 @@ HANDOFF.md
 .env
 .env.*
 *.log
+assets/app-icon.icns

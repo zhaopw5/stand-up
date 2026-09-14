@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QFileDialog, QFrame,
     QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton, QStyle,
     QStyledItemDelegate, QVBoxLayout, QWidget, QMessageBox)
 
+NUMBER_FONT = 'Helvetica Neue' if sys.platform == 'darwin' else 'Segoe UI'
+
 
 class ChoiceBox(QComboBox):
     def paintEvent(self, event):
@@ -109,7 +111,7 @@ class MiniPanel(QWidget):
         self.clock = QLabel(buddy.time.text(), self)
         self.clock.setGeometry(0, 15, 113, 34)
         self.clock.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.clock.setStyleSheet('font-family: "Segoe UI"; font-size: 33px; font-weight: 600; color: #292929;')
+        self.clock.setStyleSheet(f'font-family: "{NUMBER_FONT}"; font-size: 33px; font-weight: 600; color: #292929;')
         self.clock.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
         self.restore = MiniButton('restore', '恢复窗口', buddy.compact, self)
         self.pin_button = MiniButton('pin', '置顶窗口', buddy.toggle_pin, self)
@@ -129,14 +131,14 @@ class MiniPanel(QWidget):
         super().mousePressEvent(event)
 
     def set_time(self, text):
-        font = QFont('Segoe UI')
+        font = QFont(NUMBER_FONT)
         font.setWeight(QFont.Weight.DemiBold)
         pixels = 33
         font.setPixelSize(pixels)
         while QFontMetrics(font).horizontalAdvance(text) > self.clock.width() - 4 and pixels > 10:
             pixels -= 1
             font.setPixelSize(pixels)
-        self.clock.setStyleSheet(f'font-family: "Segoe UI"; font-size: {pixels}px; font-weight: 600; color: #292929;')
+        self.clock.setStyleSheet(f'font-family: "{NUMBER_FONT}"; font-size: {pixels}px; font-weight: 600; color: #292929;')
         self.clock.setText(text)
 
 
@@ -192,7 +194,8 @@ class WorkBuddy(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('stand up')
-        self.setWindowIcon(QIcon(str(Path(__file__).resolve().parent / 'assets' / 'app-icon.ico')))
+        icon_name = 'app-icon.png' if sys.platform == 'darwin' else 'app-icon.ico'
+        self.setWindowIcon(QIcon(str(Path(__file__).resolve().parent / 'assets' / icon_name)))
         self.remaining = 1800
         self.list_visible = True
         self.compact_mode = False
@@ -266,6 +269,8 @@ class WorkBuddy(QWidget):
         self.normal_style = self.styleSheet()
         for original, gray in palette.items():
             self.normal_style = self.normal_style.replace(original, gray)
+        if sys.platform == 'darwin':
+            self.normal_style = self.normal_style.replace('Microsoft YaHei UI', 'PingFang SC').replace('Segoe UI', NUMBER_FONT)
         self.setStyleSheet(self.normal_style)
         self.build_ui()
         self.mini = MiniPanel(self)

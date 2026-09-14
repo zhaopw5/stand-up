@@ -78,7 +78,7 @@ python -m PyInstaller "stand up.spec"
 
 ## Mac 试用版
 
-已提供 [macOS 下载页](https://github.com/zhaopw5/stand-up/releases/tag/v1.1.0-macos.1)。
+已提供 [macOS 下载页](https://github.com/zhaopw5/stand-up/releases/tag/v1.2.0)。
 Apple M 系列（包括 M2 MacBook Air）选择 `stand-up-macos-arm64.zip`；Intel Mac 选择 `stand-up-macos-x86_64.zip`。
 需要 macOS 13 或更新版本。解压后将 `stand up.app` 拖到“应用程序”。
 此版本尚未使用 Developer ID 签名或 Apple 公证，首次启动说明见 [Mac 使用说明](docs/MACOS.md)。

@@ -21,4 +21,3 @@ assert w.alarm_active and w.chime.isPlaying()
 w.pause_timer();assert not w.alarm_active
 assert w.player.playbackState()==QMediaPlayer.PlaybackState.PausedState
 w.close();print('PASS: no duplicate apply button; selected duration on start/reset; resume preserves time; alarm pauses music without auto-resume')
-

@@ -1,7 +1,8 @@
 """stand up：独立的倒计时与本地音乐播放器。"""
 import sys
 from pathlib import Path
-from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, QSize, Qt, QTimer, QUrl, Signal
+from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer, QUrl, Signal
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPainterPath, QPen, QPolygon
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
 from PySide6.QtWidgets import (QApplication, QComboBox, QFileDialog, QFrame,
@@ -29,11 +30,22 @@ class MiniButton(QPushButton):
         self.setAccessibleName(tooltip)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.clicked.connect(callback)
+        self.fluent_renderer = None
+        if kind in ('compact', 'restore'):
+            name = 'arrow-minimize-20-regular.svg' if kind == 'compact' else 'arrow-maximize-20-regular.svg'
+            source = Path(__file__).resolve().parent / 'assets' / 'fluent' / name
+            color = b'#333333' if kind == 'compact' else b'#999999'
+            self.fluent_renderer = QSvgRenderer(source.read_bytes().replace(b'#212121', color), self)
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.fillRect(self.rect(), QColor('#dddddd' if self.underMouse() else '#f3f3f3'))
+        if self.fluent_renderer is not None:
+            side = 20 if self.kind == 'compact' else 16
+            self.fluent_renderer.render(painter, QRectF(
+                (self.width() - side) / 2, (self.height() - side) / 2, side, side))
+            return
         icon_color = QColor('#333333' if self.kind == 'compact' or self.isChecked() else '#999999')
         if self.kind == 'music':
             icon_color = QColor('#999999' if self.isChecked() else '#cccccc')
@@ -87,18 +99,6 @@ class MiniButton(QPushButton):
             arrow.lineTo(1.8, 2.1)
             arrow.lineTo(4.0, 2.5)
             painter.drawPath(arrow)
-        else:
-            painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawRoundedRect(1, 0, 8, 9, 1.5, 1.5)
-            painter.drawRect(5, 0, 4, 4)
-            painter.fillRect(0, 4, 5, 6, QColor('#f3f3f3'))
-            painter.drawLine(QPointF(0.8, 8.6), QPointF(4.4, 5.0))
-            if self.kind == 'compact':
-                painter.drawLine(QPointF(2.2, 5.8), QPointF(4.4, 5.0))
-                painter.drawLine(QPointF(4.4, 5.0), QPointF(3.6, 7.2))
-            else:
-                painter.drawLine(QPointF(1.6, 6.4), QPointF(0.8, 8.6))
-                painter.drawLine(QPointF(0.8, 8.6), QPointF(3.0, 7.8))
 
 
 class MiniPanel(QWidget):

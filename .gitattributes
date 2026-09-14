@@ -1,0 +1,3 @@
+# Preserve upstream icon and license bytes so SOURCE.json hashes remain reproducible.
+/assets/fluent/* -text
+/assets/fluent/SOURCE.json text eol=lf

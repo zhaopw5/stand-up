@@ -1,0 +1,31 @@
+{
+  "repository": "https://github.com/microsoft/fluentui-system-icons",
+  "commit": "9cf8af0f95a555918a60b8147a2f33a6a1248442",
+  "files": [
+    {
+      "file": "arrow-minimize-20-regular.svg",
+      "upstream_path": "assets/Arrow Minimize/SVG/ic_fluent_arrow_minimize_20_regular.svg",
+      "url": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/9cf8af0f95a555918a60b8147a2f33a6a1248442/assets/Arrow%20Minimize/SVG/ic_fluent_arrow_minimize_20_regular.svg",
+      "sha256": "83983fcd3dc864a5e1772b39ef768f3c822b805304a74311b8c269fd1d370a65"
+    },
+    {
+      "file": "arrow-maximize-20-regular.svg",
+      "upstream_path": "assets/Arrow Maximize/SVG/ic_fluent_arrow_maximize_20_regular.svg",
+      "url": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/9cf8af0f95a555918a60b8147a2f33a6a1248442/assets/Arrow%20Maximize/SVG/ic_fluent_arrow_maximize_20_regular.svg",
+      "sha256": "de68d6989a206fec9cbf10b62326ec27f304d31ce8a39753c589c15ddd898f08"
+    },
+    {
+      "file": "LICENSE",
+      "upstream_path": "LICENSE",
+      "url": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/9cf8af0f95a555918a60b8147a2f33a6a1248442/LICENSE",
+      "sha256": "69bc45dc42b9acb96a69823adbc6ae538374e3c0bde169b855b32c48eaaef52f"
+    },
+    {
+      "file": "NOTICE",
+      "upstream_path": "NOTICE",
+      "url": "https://raw.githubusercontent.com/microsoft/fluentui-system-icons/9cf8af0f95a555918a60b8147a2f33a6a1248442/NOTICE",
+      "sha256": "2fb367a84df52c8b6f8401119708014b327f595554d41712d7407151c9ce73ef"
+    }
+  ],
+  "modifications": "SVG files are byte-for-byte upstream copies. Runtime rendering changes only color and display size."
+}

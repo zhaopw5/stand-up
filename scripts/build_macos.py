@@ -16,12 +16,12 @@ if arch not in ('arm64', 'x86_64'):
 Image.open(root / 'assets/app-icon.png').save(root / 'assets/app-icon.icns')
 subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--windowed', '--onedir',
     '--name', 'stand up', '--osx-bundle-identifier', 'io.github.zhaopw5.stand-up',
-    '--target-arch', arch, '--icon', 'assets/app-icon.icns',
-    '--add-data', 'assets/app-icon.png:assets',
-    '--add-data', 'assets/gentle-chime.wav:assets',
-    '--add-data', 'assets/fluent:assets/fluent',
-    '--add-data', 'THIRD_PARTY_NOTICES.md:.',
-    '--specpath', 'build/macos-spec', 'work_buddy.py'], cwd=root, check=True)
+    '--target-arch', arch, '--icon', str(root / 'assets/app-icon.icns'),
+    '--add-data', f'{root / "assets/app-icon.png"}:assets',
+    '--add-data', f'{root / "assets/gentle-chime.wav"}:assets',
+    '--add-data', f'{root / "assets/fluent"}:assets/fluent',
+    '--add-data', f'{root / "THIRD_PARTY_NOTICES.md"}:.',
+    '--specpath', 'build/macos-spec', str(root / 'work_buddy.py')], cwd=root, check=True)
 app = root / 'dist/stand up.app'
 # PyInstaller ad-hoc signs the bundle. This is not Developer ID signing or notarization.
 subprocess.run(['codesign', '--verify', '--deep', '--strict', str(app)], check=True)

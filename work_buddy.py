@@ -213,6 +213,7 @@ class WorkBuddy(QWidget):
         self.chime.setVolume(0.35)
         self.chime.setLoopCount(QSoundEffect.Loop.Infinite.value)
         self.alarm_active = False
+        self.reminder_dialog = None
         self.player.mediaStatusChanged.connect(self.next_track)
         self.setObjectName('app')
         self.setStyleSheet('''
@@ -349,6 +350,14 @@ class WorkBuddy(QWidget):
         controls.addWidget(self.button('重置', self.reset, 'quiet'))
         panel_layout.addWidget(self.timer_controls)
         layout.addWidget(panel)
+        reminder_row = QHBoxLayout()
+        reminder_row.addWidget(QLabel('到时提醒'))
+        self.reminder_mode = ChoiceBox()
+        self.reminder_mode.addItems(['提示音', '桌面弹窗'])
+        self.reminder_mode.setAccessibleName('到时提醒方式')
+        self.reminder_mode.setToolTip('提示音循环至暂停；桌面弹窗保持显示至确认。两种方式都会暂停背景音乐。')
+        reminder_row.addWidget(self.reminder_mode, 1)
+        layout.addLayout(reminder_row)
         self.playlist_section = QWidget()
         playlist_layout = QVBoxLayout(self.playlist_section)
         playlist_layout.setContentsMargins(0, 0, 0, 0)
@@ -558,7 +567,7 @@ class WorkBuddy(QWidget):
         button = self.mini.pause_button
         running = self.timer.isActive() or self.alarm_active
         button.kind = 'pause' if running else 'play'
-        label = '停止提示音' if self.alarm_active else '暂停倒计时' if running else '开始 / 继续倒计时'
+        label = '停止提醒' if self.alarm_active else '暂停倒计时' if running else '开始 / 继续倒计时'
         button.setToolTip(label)
         button.setAccessibleName(label)
         button.update()
@@ -598,12 +607,50 @@ class WorkBuddy(QWidget):
                 # 先暂停背景音乐并保留进度，再播放提醒，避免两路声音混在一起。
                 self.player.pause()
                 self.alarm_active = True
-                self.chime.play()
+                if self.reminder_mode.currentIndex() == 0:
+                    self.chime.play()
+                else:
+                    self.show_reminder()
                 self.sync_timer_button()
+
+    def show_reminder(self):
+        if self.reminder_dialog is None:
+            dialog = QMessageBox(self)
+            dialog.setWindowTitle('stand up · 休息一下')
+            dialog.setText('时间到了，站起来活动一下')
+            dialog.setInformativeText('离开屏幕，伸个懒腰，走一走。')
+            dialog.addButton('知道了', QMessageBox.ButtonRole.AcceptRole)
+            dialog.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.WindowStaysOnTopHint
+                                  | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint
+                                  | Qt.WindowType.WindowCloseButtonHint)
+            dialog.setWindowModality(Qt.WindowModality.NonModal)
+            dialog.setStyleSheet('QMessageBox {background:#f3f3f3;} QLabel {color:#333333;font-size:18px;min-width:280px;} QPushButton {padding:8px 24px;background:#e3e3e3;border:0;border-radius:7px;font-size:15px;}')
+            dialog.finished.connect(self.dismiss_reminder)
+            self.reminder_dialog = dialog
+        self.reminder_dialog.show()
+        self.center_reminder()
+        QTimer.singleShot(100, self.center_reminder)
+        self.reminder_dialog.raise_()
+        self.reminder_dialog.activateWindow()
+
+    def center_reminder(self):
+        dialog = self.reminder_dialog
+        if dialog is not None and dialog.isVisible():
+            area = self.screen().availableGeometry()
+            frame = dialog.frameGeometry()
+            target = area.center() - QPoint(frame.width() // 2, frame.height() // 2)
+            dialog.move(dialog.pos() + target - frame.topLeft())
+
+    def dismiss_reminder(self, *args):
+        self.alarm_active = False
+        self.chime.stop()
+        self.sync_timer_button()
 
     def stop_alarm(self):
         self.alarm_active = False
         self.chime.stop()
+        if self.reminder_dialog is not None and self.reminder_dialog.isVisible():
+            self.reminder_dialog.close()
 
     def reset(self):
         self.stop_alarm()
@@ -676,7 +723,7 @@ class WorkBuddy(QWidget):
         self.move(self.pos() + target - frame.topLeft())
 
     def closeEvent(self, event):
-        self.chime.stop()
+        self.stop_alarm()
         self.timer.stop()
         self.player.stop()
         event.accept()

@@ -1,0 +1,73 @@
+# stand up
+
+一个提醒你起身活动的 Windows 桌面倒计时工具，支持本地背景音乐与迷你浮窗。
+
+![应用图标](assets/app-icon.svg)
+
+## 下载使用
+
+从本仓库的 **Releases** 下载 `stand-up-windows-x64.zip`，解压后双击 `stand up.exe`。
+适用于 Windows 10/11 64 位，无需安装 Python。当前版本未进行数字签名。
+
+![完整界面](docs/main-window.png)
+
+### 倒计时
+
+- 快捷选择 15、30、45 分钟，默认 30 分钟。
+- 可以直接输入 1～999 的整数分钟，点击“应用时长”，再点击“开始”。
+- 计时过程中可暂停、继续；重置会停止计时并恢复当前所选时长。
+- 归零后循环播放柔和的六音符提示，每轮约 4 秒。
+- 点击倒计时“暂停”或小窗左下暂停图标停止提示音；重置、应用新时长或关闭也会停止。
+
+### 迷你浮窗
+
+点击右上角箭头进入小窗；拖动时间区域移动窗口。
+
+![小窗](docs/mini-window.png)
+
+- 左上：恢复完整窗口。恢复时会自动调整位置，避免超出桌面。
+- 右上：切换置顶。默认不置顶，深色实心表示已置顶。
+- 左下：倒计时开始／暂停／继续，响铃时用于停止提示音。
+- 底部中央音符：背景音乐播放／暂停，播放时颜色加深。
+- 右下：重置倒计时。
+
+### 背景音乐
+
+添加本地 MP3、WAV、OGG 或 M4A 文件，选中后播放，或双击歌曲播放。
+支持顺序播放、单曲循环、列表循环、拖动排序和删除歌曲。
+背景音乐与倒计时、归零提示音独立控制。音乐文件不会随应用一起分发。
+
+## 当前限制
+
+- 暂不保存播放列表、时长和窗口位置等设置；置顶选择仅在本次运行内保留。
+- 暂无安装器、自动更新或代码签名。
+- 在开发电脑上验证过主要交互；不同电脑的音频设备、解码支持和显示缩放仍需实际体验。
+
+## 从源码运行
+
+在项目根目录执行：
+
+```powershell
+python -m pip install -r requirements.txt
+python work_buddy.py
+```
+
+## 构建 Windows EXE
+
+```powershell
+python -m pip install pyinstaller
+python -m PyInstaller "stand up.spec"
+```
+
+输出位于 `dist/stand up.exe`。规格文件会收集应用图标和提示音，不需要额外播放器。
+
+## 项目结构
+
+- `work_buddy.py`：Qt 窗口、倒计时、音乐及小窗交互。
+- `assets/app-icon.svg`：可编辑的登山图标源文件。
+- `assets/app-icon.ico`：Windows 多尺寸图标。
+- `assets/gentle-chime.wav`：六音符提示音。
+- `scripts/build_icon.py`、`scripts/build_chime.py`：资源生成脚本，从项目根目录运行。
+- `stand up.spec`：Windows 打包配置。
+
+重新生成图标需要额外安装 Pillow。资源生成脚本使用的 `artifacts` 目录只存放本地预览，不提交到仓库。

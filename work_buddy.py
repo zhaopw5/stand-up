@@ -201,7 +201,7 @@ class WorkBuddy(QWidget):
         self.list_visible = True
         self.compact_mode = False
         self.pinned = False
-        self.normal_size = QSize(480, 460)
+        self.normal_size = QSize(480, 560)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.tick)
         self.audio = QAudioOutput(self)
@@ -281,7 +281,7 @@ class WorkBuddy(QWidget):
         self.add_tracks([str(Path(__file__).resolve().parent / 'assets' / 'quiet-steps-loop.wav')])
         self.list.item(0).setText('慢步 · 内置轻音乐')
         self.mode.setCurrentText('列表循环')
-        self.setMinimumSize(460, 440)
+        self.setMinimumSize(460, 540)
         self.resize(self.normal_size)
 
     @staticmethod
@@ -319,7 +319,7 @@ class WorkBuddy(QWidget):
         panel_layout = QVBoxLayout(panel)
         self.panel_layout = panel_layout
         panel_layout.setContentsMargins(18, 18, 18, 12)
-        panel_layout.setSpacing(16)
+        panel_layout.setSpacing(10)
         top = QHBoxLayout()
         top.setSpacing(12)
         self.time = QLabel('30:00', objectName='clock')
@@ -540,8 +540,8 @@ class WorkBuddy(QWidget):
         self.list_visible = not self.list_visible
         self.list.setVisible(self.list_visible)
         self.toggle_list_btn.setText('折叠列表' if self.list_visible else '展开列表')
-        self.setMinimumHeight(440 if self.list_visible else 330)
-        self.resize(self.width(), 460 if self.list_visible else 330)
+        self.setMinimumHeight(540 if self.list_visible else 390)
+        self.resize(self.width(), 560 if self.list_visible else 390)
 
     def start_timer(self):
         if not self.countdown_started or self.remaining == 0:
@@ -737,4 +737,6 @@ if __name__ == '__main__':
     window = WorkBuddy()
     window.show()
     sys.exit(app.exec())
+
+
 

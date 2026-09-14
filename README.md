@@ -75,3 +75,13 @@ python -m PyInstaller "stand up.spec"
 ## 图标来源与许可
 
 大小窗切换图标直接选自微软开源 Fluent UI System Icons（MIT），已保留原始 SVG、版权及完整许可文本。详见 [第三方图标声明](THIRD_PARTY_NOTICES.md) 和 [MIT 许可证](assets/fluent/LICENSE)。应用其他依赖的许可证需要分别遵守，本说明不代表完成了整个发行包的许可审查。
+
+## Mac 试用版
+
+已提供 [macOS 下载页](https://github.com/zhaopw5/stand-up/releases/tag/v1.1.0-macos.1)。
+Apple M 系列（包括 M2 MacBook Air）选择 `stand-up-macos-arm64.zip`；Intel Mac 选择 `stand-up-macos-x86_64.zip`。
+需要 macOS 13 或更新版本。解压后将 `stand up.app` 拖到“应用程序”。
+此版本尚未使用 Developer ID 签名或 Apple 公证，首次启动说明见 [Mac 使用说明](docs/MACOS.md)。
+
+Mac 构建由 `.github/workflows/macos.yml` 手动触发，在两种原生 macOS 15 环境完成构建、界面及启动检查。
+本地 Mac 也可安装 PySide6、PyInstaller、Pillow 后运行 `python scripts/build_macos.py`。

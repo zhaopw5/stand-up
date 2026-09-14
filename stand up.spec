@@ -5,7 +5,7 @@ a = Analysis(
     ['work_buddy.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets/app-icon.ico', 'assets'), ('assets/gentle-chime.wav', 'assets'), ('assets/fluent', 'assets/fluent'), ('THIRD_PARTY_NOTICES.md', '.')],
+    datas=[('assets/app-icon.ico', 'assets'), ('assets/gentle-chime.wav', 'assets'), ('assets/quiet-steps-loop.wav', 'assets'), ('assets/fluent', 'assets/fluent'), ('THIRD_PARTY_NOTICES.md', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

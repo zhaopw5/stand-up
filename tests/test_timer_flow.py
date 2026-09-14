@@ -10,7 +10,8 @@ assert not any(b.text()=='应用时长' for b in w.findChildren(QPushButton))
 w.duration.setEditText('25');w.start_timer();assert w.remaining==1500
 w.tick();w.pause_timer();w.duration.setEditText('15');w.start_timer();assert w.remaining==1499
 w.reset();assert w.remaining==900 and not w.timer.isActive()
-w.add_tracks([str(Path('assets/gentle-chime.wav').resolve())]);w.play_music()
+assert w.list.count()==1 and w.mode.currentText()=='列表循环'
+w.play_music()
 for _ in range(50):
  if w.player.playbackState()==QMediaPlayer.PlaybackState.PlayingState:break
  QTest.qWait(100)

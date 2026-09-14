@@ -87,3 +87,7 @@ Mac 构建由 `.github/workflows/macos.yml` 手动触发，在两种原生 macOS
 本地 Mac 也可安装 PySide6、PyInstaller、Pillow 后运行 `python scripts/build_macos.py`。
 
 倒计时结束会自动暂停背景音乐并保留音乐进度，再循环播放提示音；停止提示音后需要手动继续音乐。
+
+## 内置背景音乐
+
+默认列表包含《慢步》：60 秒无歌词、纯合成钢琴风格音乐，无需自行下载，点击播放即可。默认列表循环，不自动播放。仍可添加本地歌曲，或删除列表中的内置曲目（下次启动恢复）。倒计时结束自动暂停背景音乐。制作脚本与音符记录见 scripts/build_background_music.py 和 music/。

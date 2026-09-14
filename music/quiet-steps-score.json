@@ -1,0 +1,822 @@
+{
+  "title": "Quiet Steps / 慢步",
+  "bpm": 64,
+  "bars": 16,
+  "duration_seconds": 60.0,
+  "sample_rate": 44100,
+  "seed": 20260914,
+  "chords_midi": [
+    [
+      48,
+      55,
+      59,
+      64
+    ],
+    [
+      45,
+      52,
+      59,
+      60
+    ],
+    [
+      53,
+      57,
+      60,
+      67
+    ],
+    [
+      43,
+      50,
+      57,
+      62
+    ],
+    [
+      48,
+      55,
+      62,
+      64
+    ],
+    [
+      40,
+      47,
+      55,
+      62
+    ],
+    [
+      41,
+      48,
+      57,
+      64
+    ],
+    [
+      43,
+      50,
+      55,
+      59
+    ],
+    [
+      45,
+      52,
+      60,
+      64
+    ],
+    [
+      41,
+      48,
+      55,
+      60
+    ],
+    [
+      38,
+      45,
+      53,
+      60
+    ],
+    [
+      43,
+      50,
+      57,
+      62
+    ],
+    [
+      40,
+      47,
+      55,
+      62
+    ],
+    [
+      41,
+      48,
+      57,
+      60
+    ],
+    [
+      43,
+      50,
+      57,
+      62
+    ],
+    [
+      48,
+      55,
+      59,
+      62
+    ]
+  ],
+  "events": [
+    {
+      "beat": 0,
+      "midi": 48,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 0.5,
+      "midi": 55,
+      "velocity": 0.2753834170690858,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 1.5,
+      "midi": 59,
+      "velocity": 0.287960377460164,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 2.5,
+      "midi": 64,
+      "velocity": 0.303132610765755,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 3.5,
+      "midi": 59,
+      "velocity": 0.3110354933466124,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 0.5,
+      "midi": 76,
+      "velocity": 0.436718056664196,
+      "part": "melody"
+    },
+    {
+      "beat": 2,
+      "midi": 74,
+      "velocity": 0.4348258111441584,
+      "part": "melody"
+    },
+    {
+      "beat": 3.25,
+      "midi": 71,
+      "velocity": 0.43835677190710554,
+      "part": "melody"
+    },
+    {
+      "beat": 4,
+      "midi": 45,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 4.5,
+      "midi": 52,
+      "velocity": 0.28166224982714544,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 5.5,
+      "midi": 59,
+      "velocity": 0.27681243971986885,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 6.5,
+      "midi": 60,
+      "velocity": 0.27963368549383927,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 7.5,
+      "midi": 59,
+      "velocity": 0.3018199924452214,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 5,
+      "midi": 72,
+      "velocity": 0.42888655282944915,
+      "part": "melody"
+    },
+    {
+      "beat": 6.5,
+      "midi": 76,
+      "velocity": 0.4541805869715279,
+      "part": "melody"
+    },
+    {
+      "beat": 8,
+      "midi": 53,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 8.5,
+      "midi": 57,
+      "velocity": 0.2995332033309369,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 9.5,
+      "midi": 60,
+      "velocity": 0.2975087056627767,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 10.5,
+      "midi": 67,
+      "velocity": 0.2941065767975869,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 11.5,
+      "midi": 60,
+      "velocity": 0.2909665128378799,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 8.75,
+      "midi": 74,
+      "velocity": 0.442914955622699,
+      "part": "melody"
+    },
+    {
+      "beat": 10,
+      "midi": 72,
+      "velocity": 0.43582113749251955,
+      "part": "melody"
+    },
+    {
+      "beat": 11,
+      "midi": 69,
+      "velocity": 0.4318381628356701,
+      "part": "melody"
+    },
+    {
+      "beat": 12,
+      "midi": 43,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 12.5,
+      "midi": 50,
+      "velocity": 0.29760251285452083,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 13.5,
+      "midi": 57,
+      "velocity": 0.3026608233960659,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 14.5,
+      "midi": 62,
+      "velocity": 0.31407014030191077,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 15.5,
+      "midi": 57,
+      "velocity": 0.3057022263840882,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 13,
+      "midi": 69,
+      "velocity": 0.45052066996241735,
+      "part": "melody"
+    },
+    {
+      "beat": 14.75,
+      "midi": 71,
+      "velocity": 0.43462138653832866,
+      "part": "melody"
+    },
+    {
+      "beat": 16,
+      "midi": 48,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 16.5,
+      "midi": 55,
+      "velocity": 0.27387999777143207,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 17.5,
+      "midi": 62,
+      "velocity": 0.29105857684705183,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 18.5,
+      "midi": 64,
+      "velocity": 0.28282734350730826,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 19.5,
+      "midi": 62,
+      "velocity": 0.3014009768717865,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 16.5,
+      "midi": 67,
+      "velocity": 0.44582414925276137,
+      "part": "melody"
+    },
+    {
+      "beat": 18,
+      "midi": 74,
+      "velocity": 0.4188645182153654,
+      "part": "melody"
+    },
+    {
+      "beat": 19.25,
+      "midi": 76,
+      "velocity": 0.4203617473141175,
+      "part": "melody"
+    },
+    {
+      "beat": 20,
+      "midi": 40,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 20.5,
+      "midi": 47,
+      "velocity": 0.28855968908532825,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 21.5,
+      "midi": 55,
+      "velocity": 0.2790936982490129,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 22.5,
+      "midi": 62,
+      "velocity": 0.29006484747007266,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 23.5,
+      "midi": 55,
+      "velocity": 0.28694011091113736,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 21.25,
+      "midi": 74,
+      "velocity": 0.4270781535703117,
+      "part": "melody"
+    },
+    {
+      "beat": 23,
+      "midi": 71,
+      "velocity": 0.4545178033323227,
+      "part": "melody"
+    },
+    {
+      "beat": 24,
+      "midi": 41,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 24.5,
+      "midi": 48,
+      "velocity": 0.2663040779999679,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 25.5,
+      "midi": 57,
+      "velocity": 0.28140830236320014,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 26.5,
+      "midi": 64,
+      "velocity": 0.2676561359832291,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 27.5,
+      "midi": 57,
+      "velocity": 0.26772327537808444,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 24.5,
+      "midi": 72,
+      "velocity": 0.4383439331922943,
+      "part": "melody"
+    },
+    {
+      "beat": 26.25,
+      "midi": 69,
+      "velocity": 0.44815732782365986,
+      "part": "melody"
+    },
+    {
+      "beat": 27.5,
+      "midi": 67,
+      "velocity": 0.4506957650249856,
+      "part": "melody"
+    },
+    {
+      "beat": 28,
+      "midi": 43,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 28.5,
+      "midi": 50,
+      "velocity": 0.27185851167136965,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 29.5,
+      "midi": 55,
+      "velocity": 0.28614869475235266,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 30.5,
+      "midi": 59,
+      "velocity": 0.288837189205427,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 31.5,
+      "midi": 55,
+      "velocity": 0.2876359287122118,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 29,
+      "midi": 69,
+      "velocity": 0.4543648379180067,
+      "part": "melody"
+    },
+    {
+      "beat": 30.5,
+      "midi": 71,
+      "velocity": 0.44050118210732825,
+      "part": "melody"
+    },
+    {
+      "beat": 32,
+      "midi": 45,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 32.5,
+      "midi": 52,
+      "velocity": 0.3051612619203634,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 33.5,
+      "midi": 60,
+      "velocity": 0.2871306921437712,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 34.5,
+      "midi": 64,
+      "velocity": 0.28208842928929334,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 35.5,
+      "midi": 60,
+      "velocity": 0.31312126672439394,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 32.5,
+      "midi": 72,
+      "velocity": 0.4294668746097861,
+      "part": "melody"
+    },
+    {
+      "beat": 33.75,
+      "midi": 76,
+      "velocity": 0.42826984402577417,
+      "part": "melody"
+    },
+    {
+      "beat": 35,
+      "midi": 79,
+      "velocity": 0.42959351794027495,
+      "part": "melody"
+    },
+    {
+      "beat": 36,
+      "midi": 41,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 36.5,
+      "midi": 48,
+      "velocity": 0.2890835878402448,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 37.5,
+      "midi": 55,
+      "velocity": 0.2909812855631162,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 38.5,
+      "midi": 60,
+      "velocity": 0.2657117705910164,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 39.5,
+      "midi": 55,
+      "velocity": 0.31300164871185576,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 37,
+      "midi": 76,
+      "velocity": 0.4296108442421027,
+      "part": "melody"
+    },
+    {
+      "beat": 38.5,
+      "midi": 74,
+      "velocity": 0.44812332318183107,
+      "part": "melody"
+    },
+    {
+      "beat": 40,
+      "midi": 38,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 40.5,
+      "midi": 45,
+      "velocity": 0.28776812683342246,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 41.5,
+      "midi": 53,
+      "velocity": 0.3064846779909271,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 42.5,
+      "midi": 60,
+      "velocity": 0.3020188776613866,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 43.5,
+      "midi": 53,
+      "velocity": 0.2947399229825151,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 40.5,
+      "midi": 77,
+      "velocity": 0.40918890746040903,
+      "part": "melody"
+    },
+    {
+      "beat": 42,
+      "midi": 76,
+      "velocity": 0.4525542530957241,
+      "part": "melody"
+    },
+    {
+      "beat": 43.25,
+      "midi": 72,
+      "velocity": 0.4265179898433552,
+      "part": "melody"
+    },
+    {
+      "beat": 44,
+      "midi": 43,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 44.5,
+      "midi": 50,
+      "velocity": 0.2774095287347867,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 45.5,
+      "midi": 57,
+      "velocity": 0.2687099075730374,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 46.5,
+      "midi": 62,
+      "velocity": 0.2834411075474487,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 47.5,
+      "midi": 57,
+      "velocity": 0.27309395177174073,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 44.75,
+      "midi": 74,
+      "velocity": 0.4118826820165229,
+      "part": "melody"
+    },
+    {
+      "beat": 46.5,
+      "midi": 71,
+      "velocity": 0.41322048837310765,
+      "part": "melody"
+    },
+    {
+      "beat": 48,
+      "midi": 40,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 48.5,
+      "midi": 47,
+      "velocity": 0.30429414200331045,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 49.5,
+      "midi": 55,
+      "velocity": 0.28833140946212044,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 50.5,
+      "midi": 62,
+      "velocity": 0.31476972289749344,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 51.5,
+      "midi": 55,
+      "velocity": 0.29106459168712356,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 49,
+      "midi": 67,
+      "velocity": 0.45187793908475465,
+      "part": "melody"
+    },
+    {
+      "beat": 50.5,
+      "midi": 71,
+      "velocity": 0.4140449504127261,
+      "part": "melody"
+    },
+    {
+      "beat": 52,
+      "midi": 41,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 52.5,
+      "midi": 48,
+      "velocity": 0.2796859071949748,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 53.5,
+      "midi": 57,
+      "velocity": 0.30606774390509534,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 54.5,
+      "midi": 60,
+      "velocity": 0.310065604224302,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 55.5,
+      "midi": 57,
+      "velocity": 0.2779371475934078,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 52.5,
+      "midi": 69,
+      "velocity": 0.43447554676874145,
+      "part": "melody"
+    },
+    {
+      "beat": 54,
+      "midi": 72,
+      "velocity": 0.4320637750461862,
+      "part": "melody"
+    },
+    {
+      "beat": 55.25,
+      "midi": 76,
+      "velocity": 0.44808880262937223,
+      "part": "melody"
+    },
+    {
+      "beat": 56,
+      "midi": 43,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 56.5,
+      "midi": 50,
+      "velocity": 0.3031249936707104,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 57.5,
+      "midi": 57,
+      "velocity": 0.29685125641711363,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 58.5,
+      "midi": 62,
+      "velocity": 0.27845116605528597,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 59.5,
+      "midi": 57,
+      "velocity": 0.2929830876096145,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 56.75,
+      "midi": 74,
+      "velocity": 0.4282272987874108,
+      "part": "melody"
+    },
+    {
+      "beat": 58.25,
+      "midi": 69,
+      "velocity": 0.44039143635741146,
+      "part": "melody"
+    },
+    {
+      "beat": 60,
+      "midi": 48,
+      "velocity": 0.49,
+      "part": "bass"
+    },
+    {
+      "beat": 60.5,
+      "midi": 55,
+      "velocity": 0.29574192512221925,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 61.5,
+      "midi": 59,
+      "velocity": 0.305355107167079,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 62.5,
+      "midi": 62,
+      "velocity": 0.311352263589563,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 63.5,
+      "midi": 59,
+      "velocity": 0.2932122600977234,
+      "part": "arpeggio"
+    },
+    {
+      "beat": 60.5,
+      "midi": 71,
+      "velocity": 0.4310298210621356,
+      "part": "melody"
+    },
+    {
+      "beat": 62,
+      "midi": 74,
+      "velocity": 0.41197981824931035,
+      "part": "melody"
+    }
+  ]
+}

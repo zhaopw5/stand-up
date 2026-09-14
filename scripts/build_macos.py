@@ -19,6 +19,7 @@ subprocess.run([sys.executable, '-m', 'PyInstaller', '--noconfirm', '--windowed'
     '--target-arch', arch, '--icon', str(root / 'assets/app-icon.icns'),
     '--add-data', f'{root / "assets/app-icon.png"}:assets',
     '--add-data', f'{root / "assets/gentle-chime.wav"}:assets',
+    '--add-data', f'{root / "assets/quiet-steps-loop.wav"}:assets',
     '--add-data', f'{root / "assets/fluent"}:assets/fluent',
     '--add-data', f'{root / "THIRD_PARTY_NOTICES.md"}:.',
     '--specpath', 'build/macos-spec', str(root / 'work_buddy.py')], cwd=root, check=True)

@@ -277,6 +277,9 @@ class WorkBuddy(QWidget):
         self.mini = MiniPanel(self)
         self.player.playbackStateChanged.connect(self.sync_music_button)
         self.mini.hide()
+        self.add_tracks([str(Path(__file__).resolve().parent / 'assets' / 'quiet-steps-loop.wav')])
+        self.list.item(0).setText('慢步 · 内置轻音乐')
+        self.mode.setCurrentText('列表循环')
         self.setMinimumSize(460, 440)
         self.resize(self.normal_size)
 

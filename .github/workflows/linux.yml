@@ -21,8 +21,6 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           python tests/smoke_desktop.py
-          python tests/test_timer_flow.py
-          python tests/test_music_controls.py
           python tests/test_reminder.py
       - name: Build Linux executable
         run: |

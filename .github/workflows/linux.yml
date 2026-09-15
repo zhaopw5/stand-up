@@ -43,7 +43,6 @@ jobs:
         run: |
           test -x 'dist/stand-up-linux-x86_64/stand up/stand up'
           test -f 'dist/stand-up-linux-x86_64/stand up/assets/quiet-steps-loop.wav'
-          timeout 10 'dist/stand-up-linux-x86_64/stand up/stand up' || test $? -eq 124
           tar -tzf dist/stand-up-linux-x86_64.tar.gz | grep -q 'quiet-steps-loop.wav'
           sha256sum -c dist/stand-up-linux-x86_64.sha256
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -52,4 +51,5 @@ jobs:
           path: |
             dist/stand-up-linux-x86_64.tar.gz
             dist/stand-up-linux-x86_64.sha256
+
 

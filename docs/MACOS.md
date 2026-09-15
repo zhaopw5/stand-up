@@ -29,3 +29,5 @@ optional; behavior over full-screen apps/Spaces may differ from Windows.
 This is a Mac preview. Audio-device behavior and Finder/Gatekeeper opening on the
 recipient's Mac still need to be checked. See THIRD_PARTY_NOTICES.md for icon notices;
 this is not a complete audit of the bundled runtime's licenses.
+
+The Linux package uses the PySide6/Qt runtime and includes the built-in music, alert sound, Fluent icon notices, and third-party notices. It is an x86_64 Ubuntu 24.04 preview; other distributions are not yet physically tested.

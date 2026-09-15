@@ -99,3 +99,10 @@ Mac 构建由 `.github/workflows/macos.yml` 手动触发，在两种原生 macOS
 ## 到时提醒方式
 
 完整窗口中可选择提示音或桌面弹窗，默认提示音。弹窗模式归零时不播放提示音，在应用所在屏幕中央显示休息提示，保持显示至确认。两种提醒均自动暂停背景音乐，小窗下同样有效。选择仅在本次运行内保留；macOS 全屏空间可能影响窗口前置。
+
+## Ubuntu Linux preview
+
+- `stand-up-linux-x86_64.tar.gz` is built on Ubuntu 24.04 for 64-bit Linux.
+- Extract it and run `stand up/stand up` from the extracted directory.
+- A graphical desktop session with Qt libraries and PulseAudio/PipeWire audio is required.
+- This package is not an AppImage or Debian package, and has no automatic installer.

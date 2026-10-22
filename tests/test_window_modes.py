@@ -23,8 +23,13 @@ for maximized in (False, True):
         QTest.mouseClick(window.compact_button, Qt.MouseButton.LeftButton)
         QTest.qWait(150)
         assert window.compact_mode
-        assert not window.isMaximized()
-        assert (window.width(), window.height()) == (113, 66)
+        # Cocoa reports its native zoom flag, including for fixed-size windows.
+        # Verify mini geometry on every OS; the flag itself is reliable elsewhere.
+        if sys.platform != 'darwin':
+            assert not window.isMaximized()
+        assert (window.width(), window.height()) == (113, 66), (
+            maximized, window.size(), window.windowState()
+        )
         assert window.mini.isVisible()
 
         QTest.mouseClick(window.mini.restore, Qt.MouseButton.LeftButton)

@@ -67,8 +67,11 @@ jobs:
           ]
           checksums = []
           for name in names:
-              package = folder / name
-              assert package.is_file() and package.stat().st_size > 0, name
+              # macOS artifacts also contain screenshots, so retain a dist/ prefix.
+              matches = [path for path in folder.rglob(name) if path.is_file()]
+              assert len(matches) == 1, (name, matches)
+              package = matches[0]
+              assert package.stat().st_size > 0, name
               checksum = package.with_suffix('.sha256')
               if name.endswith('.tar.gz'):
                   checksum = folder / 'stand-up-linux-x86_64.sha256'
@@ -76,6 +79,8 @@ jobs:
               with package.open('rb') as stream:
                   actual = hashlib.file_digest(stream, 'sha256').hexdigest()
               assert recorded == actual, name
+              if package.parent != folder:
+                  package.rename(folder / name)
               checksums.append(actual + '  ' + name)
               print(f'PASS: {name} {actual}')
           (folder / 'SHA256SUMS.txt').write_text('\n'.join(checksums) + '\n')

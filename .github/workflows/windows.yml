@@ -1,0 +1,63 @@
+name: Build Windows package
+on:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.13'
+          architecture: x64
+      - name: Install build dependencies
+        run: python -m pip install 'PySide6==6.11.1' 'PyInstaller==6.22.0'
+      - name: Validate desktop behavior
+        shell: bash
+        run: |
+          python tests/smoke_desktop.py
+          python tests/test_reminder.py
+          python tests/test_window_modes.py
+      - name: Build Windows executable
+        run: python -m PyInstaller --noconfirm "stand up.spec"
+      - name: Verify packaged app launch
+        run: python tests/check_packaged_launch.py "dist/stand up.exe"
+      - name: Package Windows release
+        shell: python
+        run: |
+          import hashlib
+          from pathlib import Path
+          import shutil
+          import struct
+
+          executable = Path('dist/stand up.exe')
+          with executable.open('rb') as stream:
+              assert stream.read(2) == b'MZ'
+              stream.seek(0x3c)
+              pe_offset = struct.unpack('<I', stream.read(4))[0]
+              stream.seek(pe_offset)
+              assert stream.read(4) == b'PE\0\0'
+              assert struct.unpack('<H', stream.read(2))[0] == 0x8664
+          release = Path('dist/stand-up-windows-x64')
+          release.mkdir()
+          shutil.copy2(executable, release)
+          shutil.copy2('THIRD_PARTY_NOTICES.md', release)
+          shutil.copytree('assets/fluent', release / 'licenses/fluent')
+          archive = Path(shutil.make_archive(str(release), 'zip', release.parent, release.name))
+          digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+          archive.with_suffix('.sha256').write_text(digest + '  ' + archive.name + '\n')
+          print(f'Saved: {archive}')
+          print(f'PASS: Windows x64 executable; SHA-256 {digest}')
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: stand-up-windows-x64
+          path: |
+            dist/stand-up-windows-x64.zip
+            dist/stand-up-windows-x64.sha256
+          if-no-files-found: error

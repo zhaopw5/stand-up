@@ -1,0 +1,111 @@
+name: Build and publish release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version, for example v1.4.2'
+        required: true
+        default: v1.4.2
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: stand-up-release
+  cancel-in-progress: false
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Validate version and release notes
+        env:
+          VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test -f "docs/releases/$VERSION.md"
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "Release already exists: $VERSION"
+            exit 1
+          fi
+  windows:
+    needs: validate
+    uses: ./.github/workflows/windows.yml
+  linux:
+    needs: validate
+    uses: ./.github/workflows/linux.yml
+  macos:
+    needs: validate
+    uses: ./.github/workflows/macos.yml
+  publish:
+    needs: [windows, linux, macos]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ inputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: stand-up-*
+          path: packages
+          merge-multiple: true
+      - name: Verify all four packages and checksums
+        shell: python
+        run: |
+          import hashlib
+          from pathlib import Path
+
+          folder = Path('packages')
+          names = [
+              'stand-up-windows-x64.zip',
+              'stand-up-linux-x86_64.tar.gz',
+              'stand-up-macos-arm64.zip',
+              'stand-up-macos-x86_64.zip',
+          ]
+          checksums = []
+          for name in names:
+              package = folder / name
+              assert package.is_file() and package.stat().st_size > 0, name
+              checksum = package.with_suffix('.sha256')
+              if name.endswith('.tar.gz'):
+                  checksum = folder / 'stand-up-linux-x86_64.sha256'
+              recorded = checksum.read_text().split()[0]
+              with package.open('rb') as stream:
+                  actual = hashlib.file_digest(stream, 'sha256').hexdigest()
+              assert recorded == actual, name
+              checksums.append(actual + '  ' + name)
+              print(f'PASS: {name} {actual}')
+          (folder / 'SHA256SUMS.txt').write_text('\n'.join(checksums) + '\n')
+      - name: Create draft and upload all distributions together
+        run: |
+          gh release create "$VERSION" --draft --target "$GITHUB_SHA" \
+            --title "stand up $VERSION — Ubuntu mini-window fix" \
+            --notes-file "docs/releases/$VERSION.md" \
+            packages/stand-up-windows-x64.zip \
+            packages/stand-up-linux-x86_64.tar.gz \
+            packages/stand-up-macos-arm64.zip \
+            packages/stand-up-macos-x86_64.zip \
+            packages/SHA256SUMS.txt
+      - name: Verify uploaded assets before publishing
+        shell: python
+        run: |
+          import json
+          import os
+          import subprocess
+
+          result = subprocess.check_output([
+              'gh', 'release', 'view', os.environ['VERSION'], '--json', 'assets'
+          ], text=True)
+          names = {asset['name'] for asset in json.loads(result)['assets']}
+          expected = {
+              'stand-up-windows-x64.zip', 'stand-up-linux-x86_64.tar.gz',
+              'stand-up-macos-arm64.zip', 'stand-up-macos-x86_64.zip',
+              'SHA256SUMS.txt',
+          }
+          assert names == expected, names
+          print('PASS: draft contains all four distributions and checksums')
+      - name: Publish complete release
+        run: gh release edit "$VERSION" --draft=false --latest

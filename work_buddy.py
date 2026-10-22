@@ -1,4 +1,5 @@
 """stand up：独立的倒计时与本地音乐播放器。"""
+import os
 import sys
 from pathlib import Path
 from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer, QUrl, Signal
@@ -201,6 +202,7 @@ class WorkBuddy(QWidget):
         self.list_visible = True
         self.compact_mode = False
         self.pinned = False
+        self.restore_maximized = False
         self.normal_size = QSize(480, 560)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.tick)
@@ -667,6 +669,12 @@ class WorkBuddy(QWidget):
             self.normal_size = self.size()
         self.compact_mode = not self.compact_mode
         if self.compact_mode:
+            # 先退出最大化：Wayland 下“最大化 + 无边框 + 固定小尺寸”会让窗口
+            # 收不到帧回调而整窗不可见，只剩任务栏图标。
+            self.restore_maximized = self.isMaximized()
+            if self.restore_maximized:
+                self.normal_size = self.normalGeometry().size()
+                self.showNormal()
             self.shell.hide()
             self.outer_layout.setContentsMargins(0, 0, 0, 0)
             self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
@@ -688,6 +696,8 @@ class WorkBuddy(QWidget):
         self.move(position)
         self.show()
         self.keep_inside_screen(target_screen.availableGeometry())
+        if self.restore_maximized and not self.compact_mode:
+            self.showMaximized()
         # Windows 重建标题栏后外框尺寸才稳定，稍后按实际所在屏幕再校正。
         QTimer.singleShot(100, self.correct_screen_bounds)
 
@@ -705,7 +715,7 @@ class WorkBuddy(QWidget):
         self.mini.pin_button.update()
 
     def correct_screen_bounds(self):
-        if self.isVisible():
+        if self.isVisible() and not self.isMaximized():
             self.keep_inside_screen(self.screen().availableGeometry())
 
     @staticmethod
@@ -730,6 +740,13 @@ class WorkBuddy(QWidget):
 
 
 if __name__ == '__main__':
+    # GNOME Wayland 不允许应用自己移动或置顶顶层窗口；切换小窗时窗口会被
+    # 重建并落到合成器默认的位置，可能被其他窗口挡住。XWayland 保留这些行为。
+    if sys.platform.startswith('linux'):
+        has_display = 'DISPLAY' in os.environ
+        platform_chosen = 'QT_QPA_PLATFORM' in os.environ
+        if has_display and not platform_chosen:
+            os.environ['QT_QPA_PLATFORM'] = 'xcb'
     if sys.platform == 'win32':
         import ctypes
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('StandUpAndWalk.Desktop')

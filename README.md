@@ -1,6 +1,6 @@
 # stand up
 
-一个提醒你起身活动的 Windows 桌面倒计时工具，支持本地背景音乐与迷你浮窗。
+一个提醒你起身活动的桌面倒计时工具，支持背景音乐与迷你浮窗，提供 Windows、Ubuntu Linux 和 macOS 预览包。
 
 ![应用图标](assets/app-icon.svg)
 
@@ -35,7 +35,7 @@
 
 添加本地 MP3、WAV、OGG 或 M4A 文件，选中后播放，或双击歌曲播放。
 支持顺序播放、单曲循环、列表循环、拖动排序和删除歌曲。
-背景音乐与倒计时、归零提示音独立控制。音乐文件不会随应用一起分发。
+背景音乐与倒计时、归零提示音独立控制。应用内置一首背景音乐；自行添加的本地歌曲不会随应用分发。
 
 ## 当前限制
 
@@ -78,7 +78,7 @@ python -m PyInstaller "stand up.spec"
 
 ## Mac 试用版
 
-已提供 [macOS 下载页](https://github.com/zhaopw5/stand-up/releases/tag/v1.2.0)。
+已提供 [macOS 下载页](https://github.com/zhaopw5/stand-up/releases/latest)。
 Apple M 系列（包括 M2 MacBook Air）选择 `stand-up-macos-arm64.zip`；Intel Mac 选择 `stand-up-macos-x86_64.zip`。
 需要 macOS 13 或更新版本。解压后将 `stand up.app` 拖到“应用程序”。
 此版本尚未使用 Developer ID 签名或 Apple 公证，首次启动说明见 [Mac 使用说明](docs/MACOS.md)。
@@ -100,9 +100,14 @@ Mac 构建由 `.github/workflows/macos.yml` 手动触发，在两种原生 macOS
 
 完整窗口中可选择提示音或桌面弹窗，默认提示音。弹窗模式归零时不播放提示音，在应用所在屏幕中央显示休息提示，保持显示至确认。两种提醒均自动暂停背景音乐，小窗下同样有效。选择仅在本次运行内保留；macOS 全屏空间可能影响窗口前置。
 
-## Ubuntu Linux preview
+## Ubuntu Linux 预览版
 
-- `stand-up-linux-x86_64.tar.gz` is built on Ubuntu 24.04 for 64-bit Linux.
-- Extract it and run `stand up/stand up` from the extracted directory.
-- A graphical desktop session with Qt libraries and PulseAudio/PipeWire audio is required.
-- This package is not an AppImage or Debian package, and has no automatic installer.
+从 [最新发布页](https://github.com/zhaopw5/stand-up/releases/latest) 下载 stand-up-linux-x86_64.tar.gz，解压后运行其中的 stand up/stand up。保留旁边的 _internal 目录，无需安装 Python。
+
+目标系统为 Ubuntu 24.04 x86_64，需要图形桌面和 PulseAudio/PipeWire 音频服务。在 GNOME Wayland 中，程序默认优先使用可用的 XWayland，以兼容小窗移动和切换；用户显式设置的 Qt 后端会被保留。本次小窗消失修复已在作者的 Ubuntu 电脑上人工确认；其它发行版和桌面环境尚未实测。详见 [Linux 使用说明](docs/LINUX.md)。
+
+## 自动构建与验证
+
+GitHub Actions 的 Build and publish release 可一次构建 Windows x64、Ubuntu x86_64、macOS arm64 和 macOS x86_64。全部构建和自动检查通过后，才统一发布同一版本并附 SHA256SUMS.txt。
+
+Windows 和 Ubuntu 自动检查包含普通/最大化窗口的小窗切换、恢复以及打包程序启动；macOS 保留原生构建和启动检查。自动检查与人工实测分开记录，不代表所有设备和音频行为均已验证。各版本范围见 [发布说明](docs/releases/)。

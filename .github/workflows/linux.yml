@@ -1,6 +1,7 @@
 name: Build Ubuntu package
 on:
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
@@ -22,19 +23,22 @@ jobs:
         run: |
           python tests/smoke_desktop.py
           python tests/test_reminder.py
+          python tests/test_window_modes.py
       - name: Build Linux executable
         run: |
           python -m PyInstaller --noconfirm --windowed --onedir --name 'stand up' \
-            --add-data 'assets/app-icon.png:assets' \
-            --add-data 'assets/gentle-chime.wav:assets' \
-            --add-data 'assets/quiet-steps-loop.wav:assets' \
-            --add-data 'assets/fluent:assets/fluent' \
-            --add-data 'THIRD_PARTY_NOTICES.md:.' work_buddy.py
+            --specpath build/linux-spec \
+            --add-data "$PWD/assets/app-icon.png:assets" \
+            --add-data "$PWD/assets/app-icon.ico:assets" \
+            --add-data "$PWD/assets/gentle-chime.wav:assets" \
+            --add-data "$PWD/assets/quiet-steps-loop.wav:assets" \
+            --add-data "$PWD/assets/fluent:assets/fluent" \
+            --add-data "$PWD/THIRD_PARTY_NOTICES.md:." "$PWD/work_buddy.py"
           mkdir -p dist/stand-up-linux-x86_64/licenses
           cp -r 'dist/stand up' 'dist/stand-up-linux-x86_64/stand up'
           cp THIRD_PARTY_NOTICES.md dist/stand-up-linux-x86_64/licenses/
           cp -r assets/fluent dist/stand-up-linux-x86_64/licenses/fluent
-          cp docs/MACOS.md dist/stand-up-linux-x86_64/README.md
+          cp docs/LINUX.md dist/stand-up-linux-x86_64/README.md
           tar -czf dist/stand-up-linux-x86_64.tar.gz -C dist stand-up-linux-x86_64
           sha256sum dist/stand-up-linux-x86_64.tar.gz > dist/stand-up-linux-x86_64.sha256
       - name: Verify package
@@ -42,7 +46,9 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           test -x 'dist/stand-up-linux-x86_64/stand up/stand up'
-          test -f 'dist/stand-up-linux-x86_64/stand up/assets/quiet-steps-loop.wav'
+          test -f 'dist/stand-up-linux-x86_64/stand up/_internal/assets/quiet-steps-loop.wav'
+          test -f 'dist/stand-up-linux-x86_64/stand up/_internal/assets/app-icon.ico'
+          python tests/check_packaged_launch.py 'dist/stand-up-linux-x86_64/stand up/stand up'
           tar -tzf dist/stand-up-linux-x86_64.tar.gz | grep -q 'quiet-steps-loop.wav'
           sha256sum -c dist/stand-up-linux-x86_64.sha256
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

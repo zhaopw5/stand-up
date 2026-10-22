@@ -1,6 +1,7 @@
 name: Build macOS preview
 on:
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
@@ -30,6 +31,7 @@ jobs:
           python tests/test_timer_flow.py
           python tests/test_music_controls.py
           python tests/test_reminder.py
+          python tests/test_window_modes.py
       - name: Build native app
         run: python scripts/build_macos.py
       - name: Verify bundle launch and resources

@@ -101,6 +101,8 @@ def main():
     if not exe.is_file():
         raise SystemExit(f'Missing {exe}; run PyInstaller first (drop --repack).')
     set_medium_integrity(exe)
+    subprocess.run([sys.executable, str(root / 'tests/check_packaged_launch.py'),
+                    str(exe)], cwd=root, check=True)
     assemble(root, release)
     set_medium_integrity(release / f'{APP_NAME}.exe')
     zip_path, digest = write_zip(release)

@@ -779,6 +779,17 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = WorkBuddy()
     window.show()
+    if len(sys.argv) == 3 and sys.argv[1] == '--startup-check':
+        def confirm_startup():
+            import json
+            Path(sys.argv[2]).write_text(json.dumps({
+                'window_title': window.windowTitle(),
+                'visible': window.isVisible(),
+                'timer_text': window.time.text(),
+            }), encoding='utf-8')
+            window.close()
+            app.quit()
+        QTimer.singleShot(250, confirm_startup)
     sys.exit(app.exec())
 
 

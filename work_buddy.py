@@ -5,7 +5,7 @@ from pathlib import Path
 from PySide6.QtCore import QEvent, QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer, QUrl, Signal
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPainterPath, QPen, QPolygon
-from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer, QSoundEffect
+from PySide6.QtMultimedia import QAudioOutput, QMediaDevices, QMediaPlayer, QSoundEffect
 from PySide6.QtWidgets import (QApplication, QComboBox, QFileDialog, QFrame,
     QHBoxLayout, QLabel, QListWidget, QListWidgetItem, QPushButton, QStyle,
     QStyledItemDelegate, QVBoxLayout, QWidget, QMessageBox, QSlider)
@@ -214,6 +214,9 @@ class WorkBuddy(QWidget):
             Path(__file__).resolve().parent / 'assets' / 'gentle-chime.wav')))
         self.chime.setVolume(0.35)
         self.chime.setLoopCount(QSoundEffect.Loop.Infinite.value)
+        self.media_devices = QMediaDevices(self)
+        self.media_devices.audioOutputsChanged.connect(self.sync_audio_device)
+        self.sync_audio_device()
         self.alarm_active = False
         self.reminder_dialog = None
         self.player.mediaStatusChanged.connect(self.next_track)
@@ -285,6 +288,29 @@ class WorkBuddy(QWidget):
         self.mode.setCurrentText('列表循环')
         self.setMinimumSize(460, 540)
         self.resize(self.normal_size)
+
+    def sync_audio_device(self):
+        # Outputs keep a device snapshot; reconnect them when the system default changes.
+        # Keep the player itself alive so playback state and position are preserved.
+        device = QMediaDevices.defaultAudioOutput()
+        if device.isNull():
+            return  # Bluetooth reconnection can briefly leave no output available.
+        if self.audio.device() != device:
+            self.audio.setDevice(device)
+        failed = self.chime.status() == QSoundEffect.Status.Error
+        if self.chime.audioDevice() != device or failed:
+            resume = self.chime.isPlaying() or (
+                getattr(self, 'alarm_active', False) and self.reminder_mode.currentIndex() == 0)
+            # Qt 6.11 can duplicate active voices during a device change.
+            self.chime.stop()
+            self.chime.setAudioDevice(device)
+            if failed:
+                # A sound loaded without an output may need its sample reloaded.
+                source = self.chime.source()
+                self.chime.setSource(QUrl())
+                self.chime.setSource(source)
+            if resume:
+                self.chime.play()
 
     @staticmethod
     def button(text, callback, name=''):

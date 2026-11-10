@@ -24,6 +24,7 @@ jobs:
           python tests/smoke_desktop.py
           python tests/test_reminder.py
           python tests/test_window_modes.py
+          python tests/test_audio_devices.py
       - name: Build Linux executable
         run: |
           python -m PyInstaller --noconfirm --windowed --onedir --name 'stand up' \

@@ -87,7 +87,7 @@ jobs:
       - name: Create draft and upload all distributions together
         run: |
           gh release create "$VERSION" --draft --target "$GITHUB_SHA" \
-            --title "stand up $VERSION — Ubuntu mini-window fix" \
+            --title "stand up $VERSION" \
             --notes-file "docs/releases/$VERSION.md" \
             packages/stand-up-windows-x64.zip \
             packages/stand-up-linux-x86_64.tar.gz \

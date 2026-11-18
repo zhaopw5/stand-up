@@ -42,6 +42,7 @@ jobs:
           disable-animations: true
           script: |
             ./gradlew --no-daemon connectedDebugAndroidTest
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb shell am start -W -n com.zhaopw.standup/.MainActivity
             mkdir -p app/build/reports/device
             adb exec-out screencap -p > app/build/reports/device/android-16.png

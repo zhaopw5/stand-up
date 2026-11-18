@@ -16,6 +16,8 @@ import android.os.SystemClock
 class Notifications(private val context: Context) {
     private val manager = context.getSystemService(NotificationManager::class.java)
     fun allowed() = manager.areNotificationsEnabled() && (Build.VERSION.SDK_INT < 33 || context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
+    fun remindersAllowed(): Boolean = allowed() &&
+        (manager.getNotificationChannel(DUE_CHANNEL)?.importance ?: NotificationManager.IMPORTANCE_NONE) != NotificationManager.IMPORTANCE_NONE
     fun createChannels() {
         manager.createNotificationChannel(NotificationChannel(TIMER_CHANNEL, "计时状态", NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null) })
         manager.createNotificationChannel(NotificationChannel(DUE_CHANNEL, "起身提醒", NotificationManager.IMPORTANCE_HIGH).apply {

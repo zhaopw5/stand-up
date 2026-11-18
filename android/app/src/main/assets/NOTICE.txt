@@ -1,0 +1,34 @@
+stand up Android 1.5.0 — third-party notices
+
+AndroidX Core, AndroidX Media3, AndroidX annotations and AndroidX dependencies
+Copyright The Android Open Source Project
+https://android.googlesource.com/platform/frameworks/support/
+Licensed under the Apache License, Version 2.0 (APACHE-2.0.txt).
+
+Kotlin standard library and Kotlin coroutines
+Copyright JetBrains s.r.o. and Kotlin Programming Language contributors
+https://github.com/JetBrains/kotlin
+https://github.com/Kotlin/kotlinx.coroutines
+Licensed under the Apache License, Version 2.0 (APACHE-2.0.txt).
+
+Guava, failureaccess, Error Prone annotations and J2ObjC annotations
+Copyright Google LLC and contributors
+https://github.com/google/guava
+https://github.com/google/error-prone
+https://github.com/google/j2objc
+Licensed under the Apache License, Version 2.0 (APACHE-2.0.txt).
+
+JSpecify annotations
+Copyright The JSpecify Authors
+https://github.com/jspecify/jspecify
+Licensed under the Apache License, Version 2.0 (APACHE-2.0.txt).
+
+Checker Framework qualifiers (checker-qual)
+Copyright Checker Framework developers and contributors
+https://checkerframework.org/
+MIT License (CHECKER-QUAL-LICENSE.txt, copied from the upstream dependency).
+
+The application includes its original icon and audio from the stand up project.
+Original project licensing and attribution continue to apply.
+
+Additional upstream META-INF notices, where provided, are retained in the APK.

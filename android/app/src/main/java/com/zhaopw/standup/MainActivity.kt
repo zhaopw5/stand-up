@@ -119,9 +119,13 @@ class MainActivity : Activity() {
             addView(label("通知与后台提醒", 20f))
             permissionInfo = label(""); addView(permissionInfo)
             addView(button("允许通知 / 打开通知设置") {
-                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+                val uiPrefs = getSharedPreferences("ui", MODE_PRIVATE)
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED &&
+                    (!uiPrefs.getBoolean("notificationAsked", false) || shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS))) {
+                    uiPrefs.edit().putBoolean("notificationAsked", true).apply()
                     requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 42)
-                else startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+                } else startActivity(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    .putExtra(Settings.EXTRA_CHANNEL_ID, Notifications.DUE_CHANNEL))
             })
             if (Build.VERSION.SDK_INT >= 31) addView(button("允许准确提醒") {
                 runCatching { startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName"))) }
@@ -138,7 +142,9 @@ class MainActivity : Activity() {
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onStartTrackingTouch(bar: SeekBar) { dragging = true }
                     override fun onStopTrackingTouch(bar: SeekBar) { controller?.let { if (it.duration > 0) it.seekTo(it.duration * bar.progress / 1000) }; dragging = false }
-                    override fun onProgressChanged(bar: SeekBar, value: Int, fromUser: Boolean) { }
+                    override fun onProgressChanged(bar: SeekBar, value: Int, fromUser: Boolean) {
+                        if (fromUser && !dragging) controller?.let { if (it.duration > 0) it.seekTo(it.duration * value / 1000) }
+                    }
                 })
             }; addView(seek)
             addView(row().apply {
@@ -181,15 +187,17 @@ class MainActivity : Activity() {
         val state = repository.read()
         if (repository.deliver(state.generation)) { update(); return }
         countdown.text = formatRemaining(state.remaining(SystemClock.elapsedRealtime()))
+        // Expose the actual time on focus, without a live region announcing every tick.
+        countdown.contentDescription = "剩余时间 ${countdown.text}"
         phase.text = when (state.phase) { Phase.IDLE -> "准备开始"; Phase.RUNNING -> "专注中，记得照顾身体"; Phase.PAUSED -> "计时已暂停"; Phase.DUE -> "该起身活动一下了" }
         start.text = if (state.phase == Phase.PAUSED) "继续" else "开始"
         start.isEnabled = state.phase != Phase.RUNNING
         pause.isEnabled = state.phase == Phase.RUNNING
-        val notifications = Notifications(this).allowed()
+        val notifications = Notifications(this).remindersAllowed()
         val exact = AlarmScheduler(this).exactAllowed()
         permissionInfo.text = buildString {
             if (repository.rebootNotice()) append("手机已重启，之前的计时已取消。请重新开始。\n")
-            append(if (notifications) "✓ 通知已允许" else "⚠ 通知未允许：后台到时将无法显示或播放提醒，请点击下方允许通知。")
+            append(if (notifications) "✓ 起身提醒通知已允许" else "⚠ 起身提醒通知未允许：后台到时将无法显示或播放提醒，请点击下方允许通知，并开启起身提醒通知类别。")
             append("\n")
             append(if (exact) "✓ 准确提醒已允许" else "⚠ 准确提醒未允许：后台提醒可能延迟，请点击下方允许准确提醒。")
         }

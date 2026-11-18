@@ -35,7 +35,7 @@ Files: android/app/src/main/AndroidManifest.xml; MainActivity.kt, timer/*.kt, mu
 
 ## Task 3: Packaging and release
 Files: .github/workflows/android.yml, .github/workflows/release.yml, scripts/build_android.ps1, docs/ANDROID.md, docs/releases/v1.5.0.md, README.md.
-- [ ] Add CI Android tests, APK build and emulator smoke check; reusable workflow builds unsigned release for private local signing.
+- [ ] Add CI Android tests, APK build and emulator smoke check; reusable workflow signs release using repository secrets and verifies the APK signature. Local signing is also supported.
 - [ ] Produce and verify signed APK and SHA256. Document installation, exact-alarm and notification permission setup, force-stop/reboot limits.
 - [ ] Run all existing distribution workflows against the same source commit. Download verified artifacts, verify every checksum, stage all assets in one draft release, verify complete asset set, publish together.
 - [ ] Review complete diff independently; fix actionable defects and rerun affected checks before publishing.

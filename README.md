@@ -1,5 +1,11 @@
 # stand up
 
+## 安卓试用版
+
+从 [Releases](https://github.com/zhaopw5/stand-up/releases) 下载 `stand-up-android.apk`，支持 Android 8.0 及以上。
+包含倒计时、后台音乐、通知栏和锁屏提醒，无浮窗。使用前请允许通知和准确提醒。
+详见 [安卓安装与使用说明](docs/ANDROID.md)，包含 Redmi K70 Pro / Android 16 的锁屏检查方法。
+
 一个提醒你起身活动的桌面倒计时工具，支持背景音乐与迷你浮窗，提供 Windows、Ubuntu Linux 和 macOS 预览包。
 
 ![应用图标](assets/app-icon.svg)

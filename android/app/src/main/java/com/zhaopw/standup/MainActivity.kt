@@ -21,6 +21,7 @@ import android.view.View
 import android.view.WindowInsets
 import android.widget.*
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
@@ -75,9 +76,7 @@ class MainActivity : Activity() {
         Notifications(this).createChannels()
         window.statusBarColor = Color.TRANSPARENT
         window.navigationBarColor = Color.TRANSPARENT
-        if (Build.VERSION.SDK_INT >= 30) window.setDecorFitsSystemWindows(false)
-        @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         val scroll = ScrollView(this).apply { isFillViewport = true; setBackgroundColor(Color.rgb(248,248,248)) }
         val content = column().apply { setPadding(dp(20),dp(20),dp(20),dp(24)) }
         scroll.addView(content)
@@ -92,16 +91,17 @@ class MainActivity : Activity() {
             insets
         }
         setContentView(scroll)
+        applySystemBarAppearance()
         content.addView(label("stand up", 30f).apply { setTypeface(null,Typeface.BOLD) })
         content.addView(label("留一点时间，起来走走。", 16f))
         content.addView(card().apply {
             phase = label("准备开始").apply { gravity = Gravity.CENTER }; addView(phase)
             countdown = label("30:00", 56f).apply { gravity = Gravity.CENTER; typeface = Typeface.MONOSPACE; contentDescription = "剩余时间" }; addView(countdown)
-            addView(label("每隔多少分钟提醒你？"))
+            addView(label("设置倒计时（分钟）"))
             minutes = EditText(this@MainActivity).apply {
                 id = View.generateViewId(); setText((repository.read().duration / 60000).toString())
                 inputType = InputType.TYPE_CLASS_NUMBER; setSingleLine(); hint = "1–999 分钟"; minHeight = dp(48)
-                contentDescription = "提醒间隔，1到999整数分钟"
+                contentDescription = "倒计时时长，1到999整数分钟"
             }; addView(minutes)
             addView(row().apply { listOf(15,30,45,60).forEach { value -> equal(button("$value") { minutes.setText(value.toString()) }) } })
             addView(row().apply {
@@ -180,7 +180,17 @@ class MainActivity : Activity() {
     private fun validMinutes(): Int? = parseMinutes(minutes.text.toString()).also {
         if (it == null) { minutes.error = "请输入 1–999 的整数分钟"; minutes.requestFocus() } else minutes.error = null
     }
-    override fun onResume() { super.onResume(); visible = true; repository.refreshSchedule(); handler.post(tick) }
+    private fun applySystemBarAppearance() {
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
+    }
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) applySystemBarAppearance()
+    }
+    override fun onResume() { super.onResume(); applySystemBarAppearance(); visible = true; repository.refreshSchedule(); handler.post(tick) }
     override fun onPause() { visible = false; handler.removeCallbacks(tick); super.onPause() }
     override fun onDestroy() { controllerFuture?.let { MediaController.releaseFuture(it) }; super.onDestroy() }
     private fun update() {

@@ -10,6 +10,7 @@ import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsetsController
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.test.core.app.ActivityScenario
@@ -27,6 +28,19 @@ import java.util.concurrent.CountDownLatch
 @RunWith(AndroidJUnit4::class)
 class TimerIntegrationTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+    @Test fun lightScreenUsesDarkSystemBarIconsAfterRecreation() {
+        if (Build.VERSION.SDK_INT < 30) return
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            fun assertDarkBars(activity: MainActivity) {
+                val appearance = activity.window.insetsController!!.systemBarsAppearance
+                assertTrue(appearance and WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS != 0)
+                assertTrue(appearance and WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS != 0)
+            }
+            scenario.onActivity { assertDarkBars(it) }
+            scenario.recreate()
+            scenario.onActivity { assertDarkBars(it) }
+        }
+    }
     @Test fun repositorySurvivesRecreationAndRejectsStaleDelivery() {
         val first = TimerRepository(context)
         first.reset(2)

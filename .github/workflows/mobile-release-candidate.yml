@@ -1,8 +1,6 @@
 name: Verify Android and desktop release candidate
 on:
   workflow_dispatch:
-  push:
-    branches: [codex/android-first-version]
 permissions:
   contents: read
 jobs:

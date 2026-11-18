@@ -3,9 +3,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version, for example v1.4.2'
+        description: 'Release version, for example v1.5.0'
         required: true
-        default: v1.4.2
+        default: v1.5.0
         type: string
 permissions:
   contents: read
@@ -37,8 +37,12 @@ jobs:
   macos:
     needs: validate
     uses: ./.github/workflows/macos.yml
+  android:
+    needs: validate
+    uses: ./.github/workflows/android.yml
+    secrets: inherit
   publish:
-    needs: [windows, linux, macos]
+    needs: [windows, linux, macos, android]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -52,7 +56,7 @@ jobs:
           pattern: stand-up-*
           path: packages
           merge-multiple: true
-      - name: Verify all four packages and checksums
+      - name: Verify all five packages and checksums
         shell: python
         run: |
           import hashlib
@@ -64,6 +68,7 @@ jobs:
               'stand-up-linux-x86_64.tar.gz',
               'stand-up-macos-arm64.zip',
               'stand-up-macos-x86_64.zip',
+              'stand-up-android.apk',
           ]
           checksums = []
           for name in names:
@@ -93,6 +98,7 @@ jobs:
             packages/stand-up-linux-x86_64.tar.gz \
             packages/stand-up-macos-arm64.zip \
             packages/stand-up-macos-x86_64.zip \
+            packages/stand-up-android.apk \
             packages/SHA256SUMS.txt
       - name: Verify uploaded assets before publishing
         shell: python
@@ -108,9 +114,10 @@ jobs:
           expected = {
               'stand-up-windows-x64.zip', 'stand-up-linux-x86_64.tar.gz',
               'stand-up-macos-arm64.zip', 'stand-up-macos-x86_64.zip',
+              'stand-up-android.apk',
               'SHA256SUMS.txt',
           }
           assert names == expected, names
-          print('PASS: draft contains all four distributions and checksums')
+          print('PASS: draft contains all five distributions and checksums')
       - name: Publish complete release
         run: gh release edit "$VERSION" --draft=false --latest

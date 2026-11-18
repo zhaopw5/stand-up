@@ -1,0 +1,17 @@
+name: Verify Android and desktop release candidate
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/android-first-version]
+permissions:
+  contents: read
+jobs:
+  windows:
+    uses: ./.github/workflows/windows.yml
+  macos:
+    uses: ./.github/workflows/macos.yml
+  linux:
+    uses: ./.github/workflows/linux.yml
+  android:
+    uses: ./.github/workflows/android.yml
+    secrets: inherit

@@ -1,0 +1,60 @@
+package com.zhaopw.standup
+
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.OpenableColumns
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import org.json.JSONArray
+import org.json.JSONObject
+
+data class Track(val uri: String, val title: String) {
+    fun mediaItem(): MediaItem = MediaItem.Builder().setMediaId(uri).setUri(uri)
+        .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist("stand up").build()).build()
+}
+class MusicLibrary(private val context: Context) {
+    private val prefs = context.getSharedPreferences("music", Context.MODE_PRIVATE)
+    private val builtIn = Track("android.resource://${context.packageName}/${R.raw.quiet_steps_loop}", "慢步 · 内置音乐")
+    fun tracks(): List<Track> = buildList {
+        add(builtIn)
+        val array = runCatching { JSONArray(prefs.getString("tracks", "[]")) }.getOrDefault(JSONArray())
+        for (index in 0 until array.length()) runCatching {
+            val item = array.getJSONObject(index)
+            add(Track(item.getString("uri"), item.getString("title")))
+        }
+    }.distinctBy { it.uri }
+    private fun save(tracks: List<Track>) {
+        val array = JSONArray()
+        tracks.filter { it.uri != builtIn.uri }.forEach { array.put(JSONObject().put("uri", it.uri).put("title", it.title)) }
+        prefs.edit().putString("tracks", array.toString()).commit()
+    }
+    fun import(uri: Uri) {
+        if (tracks().any { it.uri == uri.toString() }) return
+        context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        try {
+            context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { } ?: error("无法读取该音频")
+            val title = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+                if (it.moveToFirst()) it.getString(0) else null
+            } ?: "导入的音频"
+            save(tracks() + Track(uri.toString(), title))
+        } catch (error: Exception) {
+            runCatching { context.contentResolver.releasePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            throw error
+        }
+    }
+    fun remove(track: Track) {
+        if (track.uri == builtIn.uri) return
+        save(tracks().filter { it.uri != track.uri })
+        runCatching { context.contentResolver.releasePersistableUriPermission(Uri.parse(track.uri), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+    }
+    fun removable(track: Track) = track.uri != builtIn.uri
+    var mode: Int
+        get() = prefs.getInt("mode", 2)
+        set(value) { prefs.edit().putInt("mode", value).apply() }
+    fun savePosition(uri: String, position: Long) { prefs.edit().putString("selected", uri).putLong("position", position).apply() }
+    fun selected() = prefs.getString("selected", builtIn.uri)
+    fun position() = prefs.getLong("position", 0)
+    fun error(message: String?) { prefs.edit().putString("error", message).apply() }
+    fun error() = prefs.getString("error", null)
+}

@@ -28,6 +28,16 @@ Copyright Checker Framework developers and contributors
 https://checkerframework.org/
 MIT License (CHECKER-QUAL-LICENSE.txt, copied from the upstream dependency).
 
+JSR-305 annotations (com.google.code.findbugs:jsr305 3.0.2)
+Copyright JSR-305 / FindBugs contributors
+https://github.com/findbugsproject/findbugs
+Licensed under the Apache License, Version 2.0, as declared by the upstream 3.0.2 POM.
+
+JetBrains Java annotations
+Copyright JetBrains s.r.o. and contributors
+https://github.com/JetBrains/java-annotations
+Licensed under the Apache License, Version 2.0 (APACHE-2.0.txt).
+
 The application includes its original icon and audio from the stand up project.
 Original project licensing and attribution continue to apply.
 

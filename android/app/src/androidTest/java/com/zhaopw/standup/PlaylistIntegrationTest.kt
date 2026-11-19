@@ -124,9 +124,48 @@ class PlaylistIntegrationTest {
  }
  @Test fun realTouchSeparatesPresetAndCustomDialog() {
   val instrumentation=InstrumentationRegistry.getInstrumentation()
+  instrumentation.uiAutomation.serviceInfo=instrumentation.uiAutomation.serviceInfo.apply {
+   flags=flags or android.accessibilityservice.AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
+  }
   TimerRepository(context).reset(30)
   ActivityScenario.launch(MainActivity::class.java).use { scenario ->
    fun tap(tag:String) {
+    // Slow hosted emulators can show an OS-process ANR over a resumed Activity.
+    // Dismiss only that OS dialog's Wait action; never mask an ANR in our app.
+    var recoveredOsDialog=false
+    fun recoverOsAnr():Boolean {
+     if(recoveredOsDialog) return false
+     val root=instrumentation.uiAutomation.rootInActiveWindow ?: return false
+     if(root.packageName?.toString()!="android") return false
+     fun texts(node:android.view.accessibility.AccessibilityNodeInfo):List<String> = listOfNotNull(node.text?.toString())+
+      (0 until node.childCount).flatMap { index -> node.getChild(index)?.let { texts(it) } ?: emptyList() }
+     val dialog=texts(root).joinToString(" ")
+     val osAnr=listOf("System UI","Pixel Launcher","Launcher","com.android.systemui","com.android.launcher3")
+      .any { dialog.contains(it,true) } && dialog.contains("respond",true) && !dialog.contains("stand up",true)
+     val wait=root.findAccessibilityNodeInfosByViewId("android:id/aerr_wait").singleOrNull()
+     if(!osAnr || wait==null || wait.text?.toString()!="Wait") return false
+     android.util.Log.w("StandUpTest", "Recovering emulator OS ANR: $dialog")
+     instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+      java.io.File(context.getExternalFilesDir(null),"emulator-os-anr.png").outputStream().use {
+       bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)
+      }; bitmap.recycle()
+     }
+     recoveredOsDialog=true
+     return wait.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK)
+    }
+    fun awaitFocus() {
+    val focusDeadline=android.os.SystemClock.elapsedRealtime()+10000
+    var focused=false
+    while(!focused && android.os.SystemClock.elapsedRealtime()<focusDeadline) {
+     scenario.onActivity { focused=it.hasWindowFocus() }
+     if(!focused) {
+      recoverOsAnr()
+      android.os.SystemClock.sleep(150)
+     }
+    }
+    assertTrue("App must own focused window before touch injection",focused)
+    }
+    awaitFocus()
     val r=Rect()
     scenario.onActivity { a ->
      val v=a.findViewById<ViewGroup>(android.R.id.content).findViewWithTag<View>(tag)
@@ -142,7 +181,12 @@ class PlaylistIntegrationTest {
     val now=android.os.SystemClock.uptimeMillis()
     listOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP).forEach { action ->
      val event=android.view.MotionEvent.obtain(now,now+20,action,r.exactCenterX(),r.exactCenterY(),0)
-     instrumentation.sendPointerSync(event); event.recycle()
+     try { instrumentation.sendPointerSync(event) }
+     catch(error:IllegalArgumentException) {
+      if(!error.message.orEmpty().contains("not directed at a window owned") || !recoverOsAnr()) throw error
+      awaitFocus()
+      instrumentation.sendPointerSync(event)
+     } finally { event.recycle() }
     }
     instrumentation.waitForIdleSync()
    }

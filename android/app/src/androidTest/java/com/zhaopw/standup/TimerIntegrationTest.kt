@@ -196,7 +196,8 @@ class TimerIntegrationTest {
         val repo=TimerRepository(context)
         val run=repo.start(1)
         context.getSharedPreferences("timer",Context.MODE_PRIVATE).edit().putLong("deadline",SystemClock.elapsedRealtime()-1).commit()
-        assertTrue(repo.deliver(run.generation))
+        // Match real alarm receivers/UI callbacks, which deliver on Android's main thread.
+        InstrumentationRegistry.getInstrumentation().runOnMainSync { assertTrue(repo.deliver(run.generation)) }
         val dueGeneration=repo.read().generation
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { a -> control(a,"timer_primary").performClick() }

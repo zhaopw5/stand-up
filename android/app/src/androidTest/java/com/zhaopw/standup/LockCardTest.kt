@@ -65,7 +65,7 @@ class LockCardTest {
      assertEquals(running.deadline, clock.base)
      assertTrue(clock.isCountDown)
      assertEquals(View.GONE, view.findViewById<View>(R.id.card_time).visibility)
-     assertTrue(view.findViewById<TextView>(R.id.card_status).text.contains("距离起身"))
+     assertEquals(if (remote.layoutId == R.layout.notification_compact) "起身" else "stand up · 距离起身", view.findViewById<TextView>(R.id.card_status).text.toString())
      host.removeAllViews(); host.addView(view)
     }
    }

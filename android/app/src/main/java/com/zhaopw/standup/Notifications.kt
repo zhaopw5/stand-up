@@ -11,7 +11,6 @@ import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
-import android.os.SystemClock
 import android.view.View
 import android.widget.RemoteViews
 
@@ -42,7 +41,10 @@ class Notifications(private val context: Context) {
         val running = state.phase == Phase.RUNNING
         val due = state.phase == Phase.DUE
         return RemoteViews(context.packageName, if (expanded) R.layout.notification_expanded else R.layout.notification_compact).apply {
-            setTextViewText(R.id.card_status, when { due -> "stand up · 起身时间"; running -> "stand up · 距离起身"; else -> "stand up · 已暂停" })
+            // Keep the compact label short: a 999-minute clock must fit at large font sizes.
+            setTextViewText(R.id.card_status, if (expanded) when { due -> "stand up · 起身时间"; running -> "stand up · 距离起身"; else -> "stand up · 已暂停" }
+                else if (running) "起身" else "暂停")
+            setViewVisibility(R.id.card_status, if (!expanded && due) View.GONE else View.VISIBLE)
             setViewVisibility(R.id.card_clock, if (running) View.VISIBLE else View.GONE)
             setViewVisibility(R.id.card_time, if (running) View.GONE else View.VISIBLE)
             if (running) {

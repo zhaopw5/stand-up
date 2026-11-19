@@ -31,8 +31,25 @@ class LockCardTest {
   instrumentation.uiAutomation.grantRuntimePermission(context.packageName, Manifest.permission.POST_NOTIFICATIONS)
   return TimerRepository(context).also { it.reset(2) }
  }
+ @Test fun pausedCardRestoresWhenReturningWithNotificationsAllowed() {
+  val repo = ready()
+  try {
+   repo.start(2); val paused = repo.pause()
+   // An absent card also occurs after permission/category was disabled then enabled.
+   Notifications(context).cancelRunning()
+   SystemClock.sleep(200)
+   assertTrue(manager.activeNotifications.none { it.id == 10 })
+   repo.refreshSchedule()
+   assertNotNull(posted().contentView)
+   assertEquals(paused, repo.read())
+   assertEquals("继续", posted().actions[0].title.toString())
+  } finally {
+   repo.reset(30)
+  }
+ }
  @Test fun postedLayoutsApplyReapplyAndClockTicksWithoutReposting() {
   val repo = ready(); val running = repo.start(2)
+  posted() // NotificationManager posts across a process boundary.
   val initial = manager.activeNotifications.first { it.id == 10 }
   val card = initial.notification
   ActivityScenario.launch(MainActivity::class.java).use { scenario ->

@@ -81,8 +81,8 @@ class TimerRepository(private val context: Context) {
     }
     fun refreshSchedule() = synchronized(lock) {
         val state = read()
-        if (!deliver(state.generation) && state.phase == Phase.RUNNING) {
-            scheduler.schedule(state)
+        if (!deliver(state.generation) && (state.phase == Phase.RUNNING || state.phase == Phase.PAUSED)) {
+            if (state.phase == Phase.RUNNING) scheduler.schedule(state)
             Notifications(context).running(state)
         }
     }

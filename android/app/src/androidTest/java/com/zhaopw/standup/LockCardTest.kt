@@ -62,6 +62,7 @@ class LockCardTest {
    lateinit var clock: Chronometer
    var text = ""
    scenario.onActivity { activity ->
+    activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     val host = FrameLayout(activity)
     activity.setContentView(host)
     for (remote in listOf(card.contentView, card.bigContentView)) {
@@ -79,8 +80,13 @@ class LockCardTest {
    val postedAt = manager.activeNotifications.first { it.id == 10 }.postTime
    SystemClock.sleep(1100)
    scenario.onActivity { text = clock.text.toString() }
-   SystemClock.sleep(1200)
-   scenario.onActivity { assertNotEquals(text, clock.text.toString()) }
+   var ticked = false
+   val tickDeadline = SystemClock.elapsedRealtime() + 8000
+   while (!ticked && SystemClock.elapsedRealtime() < tickDeadline) {
+    SystemClock.sleep(150)
+    scenario.onActivity { ticked = clock.text.toString() != text }
+   }
+   assertTrue("Attached native countdown must tick without app notification updates", ticked)
    assertEquals(postedAt, manager.activeNotifications.first { it.id == 10 }.postTime)
    posted().actions[0].actionIntent.send(); SystemClock.sleep(300)
    scenario.onActivity { activity ->

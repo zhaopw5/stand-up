@@ -29,7 +29,13 @@ class LockCardTest {
  }
  private fun ready(): TimerRepository {
   instrumentation.uiAutomation.grantRuntimePermission(context.packageName, Manifest.permission.POST_NOTIFICATIONS)
-  return TimerRepository(context).also { it.reset(2) }
+  val repo = TimerRepository(context).also { it.reset(2) }
+  // Cancellation is asynchronous too. Do not accidentally tap the preceding test's card.
+  repeat(40) {
+   if (manager.activeNotifications.none { it.id == 10 || it.id == 11 }) return repo
+   SystemClock.sleep(50)
+  }
+  error("Previous timer notification was not cancelled")
  }
  @Test fun pausedCardRestoresWhenReturningWithNotificationsAllowed() {
   val repo = ready()

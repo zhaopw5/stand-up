@@ -15,7 +15,7 @@ data class Track(val uri: String, val title: String) {
 }
 class MusicLibrary(private val context: Context) {
     private val prefs = context.getSharedPreferences("music", Context.MODE_PRIVATE)
-    private val builtIn = Track("android.resource://${context.packageName}/${R.raw.quiet_steps_loop}", "慢步 · 内置音乐")
+    private val builtIn = Track("android.resource://${context.packageName}/raw/quiet_steps_loop", "慢步 · 内置音乐")
     fun tracks(): List<Track> = buildList {
         add(builtIn)
         val array = runCatching { JSONArray(prefs.getString("tracks", "[]")) }.getOrDefault(JSONArray())
@@ -45,7 +45,7 @@ class MusicLibrary(private val context: Context) {
     }
     fun remove(track: Track) {
         if (track.uri == builtIn.uri) return
-        save(tracks().filter { it.uri != track.uri })
+        save(tracks().filter { it.uri != track.uri }); error(track.uri, null)
         runCatching { context.contentResolver.releasePersistableUriPermission(Uri.parse(track.uri), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
     fun removable(track: Track) = track.uri != builtIn.uri
@@ -53,8 +53,10 @@ class MusicLibrary(private val context: Context) {
         get() = prefs.getInt("mode", 2)
         set(value) { prefs.edit().putInt("mode", value).apply() }
     fun savePosition(uri: String, position: Long) { prefs.edit().putString("selected", uri).putLong("position", position).apply() }
-    fun selected() = prefs.getString("selected", builtIn.uri)
+    fun selected() = prefs.getString("selected", builtIn.uri)?.let { if (it.startsWith("android.resource://")) builtIn.uri else it }
     fun position() = prefs.getLong("position", 0)
-    fun error(message: String?) { prefs.edit().putString("error", message).apply() }
-    fun error() = prefs.getString("error", null)
+    fun error(message: String?) = error(selected(), message)
+    fun error() = trackError(selected())
+    fun error(uri: String?, message: String?) { if (uri != null) prefs.edit().putString("error:$uri", message).apply() }
+    fun trackError(uri: String?) = if (uri == null) null else prefs.getString("error:$uri", null)
 }

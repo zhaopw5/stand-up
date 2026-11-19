@@ -139,7 +139,8 @@ class TimerIntegrationTest {
                     val views = descendants(activity.findViewById(android.R.id.content))
                     val countdown = views.filterIsInstance<TextView>().first { it.contentDescription?.startsWith("剩余时间 ") == true }
                     assertEquals("剩余时间 ${countdown.text}", countdown.contentDescription.toString())
-                    val seek = views.filterIsInstance<SeekBar>().single()
+                                        activity.findViewById<ViewGroup>(android.R.id.content).findViewWithTag<View>("music_library").performClick()
+                    val seek = android.view.inspector.WindowInspector.getGlobalWindowViews().flatMap { descendants(it) }.filterIsInstance<SeekBar>().single()
                     assertTrue(seek.isEnabled)
                     seek.requestFocus()
                     seek.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))
@@ -148,6 +149,114 @@ class TimerIntegrationTest {
                 SystemClock.sleep(300)
                 instrumentation.runOnMainSync { assertTrue("Keyboard progress must seek the actual session", player.currentPosition > 0) }
             } finally { instrumentation.runOnMainSync { player.release() } }
+        }
+    }
+    private fun control(activity: MainActivity, tag: String): View = activity.findViewById<ViewGroup>(android.R.id.content).findViewWithTag(tag)
+    private fun prepareUi() {
+        TimerRepository(context).reset(30)
+        context.getSharedPreferences("ui",Context.MODE_PRIVATE).edit().clear().putBoolean("firstStartExplained",true).commit()
+    }
+    @Test fun presetsUpdateIdleAndPausedSelectionPreservesRemaining() {
+        prepareUi()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { a ->
+                control(a,"preset_15").performClick()
+                assertEquals("15:00",(control(a,"countdown") as TextView).text.toString())
+                control(a,"timer_primary").performClick()
+                assertEquals(Phase.RUNNING,TimerRepository(context).read().phase)
+                control(a,"timer_primary").performClick()
+                val remaining=TimerRepository(context).read().savedRemaining
+                control(a,"preset_60").performClick()
+                assertEquals(remaining,TimerRepository(context).read().savedRemaining)
+                control(a,"timer_primary").performClick()
+                assertEquals(remaining,TimerRepository(context).read().savedRemaining)
+            }
+            val deadline=TimerRepository(context).read().deadline
+            scenario.recreate()
+            assertEquals(deadline,TimerRepository(context).read().deadline)
+            assertEquals(60,context.getSharedPreferences("ui",Context.MODE_PRIVATE).getInt("selectedMinutes",0))
+        }
+    }
+    @Test fun dueAcknowledgementAndStaleNotificationAreSafe() {
+        prepareUi()
+        val repo=TimerRepository(context)
+        val run=repo.start(1)
+        context.getSharedPreferences("timer",Context.MODE_PRIVATE).edit().putLong("deadline",SystemClock.elapsedRealtime()-1).commit()
+        assertTrue(repo.deliver(run.generation))
+        val dueGeneration=repo.read().generation
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { a -> control(a,"timer_primary").performClick() }
+            assertEquals(Phase.IDLE,repo.read().phase)
+            repo.start(30)
+            val deadline=repo.read().deadline
+            assertFalse(repo.acknowledge(dueGeneration,30))
+            assertEquals(deadline,repo.read().deadline)
+        }
+    }
+    @Test fun rebootBannerDismissalSurvivesRecreation() {
+        prepareUi()
+        context.getSharedPreferences("timer",Context.MODE_PRIVATE).edit().putBoolean("rebooted",true).commit()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { a -> control(a,"reboot_dismiss").performClick() }
+            assertFalse(TimerRepository(context).rebootNotice())
+            scenario.recreate()
+            assertFalse(TimerRepository(context).rebootNotice())
+        }
+    }
+    private fun dialogRoot(): View = android.view.inspector.WindowInspector.getGlobalWindowViews().last()
+    @Test fun cancellingEndAndAdjustKeepsDeadlineAndExpiredConfirmationCannotResetDue() {
+        if(Build.VERSION.SDK_INT<29) return
+        prepareUi()
+        val repo=TimerRepository(context); val run=repo.start(30)
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { a ->
+                control(a,"timer_end").performClick()
+                dialogRoot().findViewById<View>(android.R.id.button2).performClick()
+                assertEquals(run.deadline,repo.read().deadline)
+                control(a,"timer_adjust").performClick()
+                dialogRoot().findViewWithTag<android.widget.EditText>("duration_input").setText("60")
+                dialogRoot().findViewById<View>(android.R.id.button1).performClick()
+                dialogRoot().findViewById<View>(android.R.id.button2).performClick()
+                assertEquals(run.deadline,repo.read().deadline)
+                assertEquals(30,context.getSharedPreferences("ui",Context.MODE_PRIVATE).getInt("selectedMinutes",30))
+                control(a,"timer_end").performClick()
+                context.getSharedPreferences("timer",Context.MODE_PRIVATE).edit().putLong("deadline",SystemClock.elapsedRealtime()-1).commit()
+                dialogRoot().findViewById<View>(android.R.id.button1).performClick()
+                assertEquals(Phase.DUE,repo.read().phase)
+            }
+        }
+    }
+    @Test fun customDurationRejectsOutOfBoundsAndAcceptsBothLimits() {
+        if(Build.VERSION.SDK_INT<29) return
+        prepareUi()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { a ->
+                control(a,"duration_custom").performClick()
+                val input=dialogRoot().findViewWithTag<android.widget.EditText>("duration_input")
+                listOf("0","1000").forEach { bad -> input.setText(bad); dialogRoot().findViewById<View>(android.R.id.button1).performClick(); assertNotNull(input.error); assertEquals(Phase.IDLE,TimerRepository(context).read().phase) }
+                input.setText("1"); dialogRoot().findViewById<View>(android.R.id.button1).performClick()
+                assertEquals("01:00",(control(a,"countdown") as TextView).text.toString())
+                control(a,"duration_custom").performClick()
+                dialogRoot().findViewWithTag<android.widget.EditText>("duration_input").setText("999")
+                dialogRoot().findViewById<View>(android.R.id.button1).performClick()
+                assertEquals("999:00",(control(a,"countdown") as TextView).text.toString())
+            }
+        }
+    }
+    @Test fun firstStartCanSkipPermissionsWithoutChainedPopup() {
+        if(Build.VERSION.SDK_INT<33) return
+        prepareUi()
+        context.getSharedPreferences("ui",Context.MODE_PRIVATE).edit().putBoolean("firstStartExplained",false).commit()
+        Notifications(context).createChannels()
+        context.getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(Notifications.DUE_CHANNEL,"起身提醒",NotificationManager.IMPORTANCE_NONE))
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { a ->
+                control(a,"timer_primary").performClick()
+                assertEquals(Phase.IDLE,TimerRepository(context).read().phase)
+                dialogRoot().findViewById<View>(android.R.id.button2).performClick()
+                assertEquals(Phase.RUNNING,TimerRepository(context).read().phase)
+                assertTrue(context.getSharedPreferences("ui",Context.MODE_PRIVATE).getBoolean("firstStartExplained",false))
+            }
         }
     }
 }

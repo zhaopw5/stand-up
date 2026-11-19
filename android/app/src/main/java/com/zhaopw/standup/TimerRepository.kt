@@ -60,6 +60,12 @@ class TimerRepository(private val context: Context) {
         Notifications(context).cancelAll()
         next
     }
+    fun acknowledge(generation: Long, minutes: Int): Boolean = synchronized(lock) {
+        val current = read()
+        if (current.phase != Phase.DUE || (generation >= 0 && current.generation != generation)) return@synchronized false
+        reset(minutes)
+        true
+    }
     fun refreshSchedule() = synchronized(lock) {
         val state = read()
         if (!deliver(state.generation) && state.phase == Phase.RUNNING) {
@@ -72,7 +78,7 @@ class TimerRepository(private val context: Context) {
         save(next) // Save first: duplicate broadcasts cannot play a second sound.
         scheduler.cancel()
         MusicService.pauseForReminder(context)
-        Notifications(context).due()
+        Notifications(context).due(next.generation)
         true
     }
     companion object { private val lock = Any() }
@@ -99,7 +105,10 @@ class AlarmScheduler(private val context: Context) {
 
 class ReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action == Notifications.ACK) Notifications(context).acknowledge()
+        if (intent.action == Notifications.ACK) {
+            val repo = TimerRepository(context); val selected = context.getSharedPreferences("ui", Context.MODE_PRIVATE).getInt("selectedMinutes", 30).coerceIn(1,999)
+            repo.acknowledge(intent.getLongExtra("generation", -1), selected)
+        }
         else TimerRepository(context).deliver(intent.getLongExtra("generation", -1))
     }
 }

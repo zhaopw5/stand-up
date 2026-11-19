@@ -35,10 +35,10 @@ class MusicService : MediaSessionService() {
         player.setMediaItems(tracks.map { it.mediaItem() }, tracks.indexOfFirst { it.uri == library.selected() }.coerceAtLeast(0), library.position())
         player.repeatMode = library.mode
         player.addListener(object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) { if (!isPlaying) savePosition() else library.error(null) }
+            override fun onIsPlayingChanged(isPlaying: Boolean) { if (!isPlaying) savePosition() else library.error(player.currentMediaItem?.mediaId, null) }
             override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) { savePosition() }
             override fun onPlayerError(error: PlaybackException) {
-                library.error("无法播放「${player.currentMediaItem?.mediaMetadata?.title ?: "音频"}」。文件可能已移动、权限失效或格式不支持，请移除后重新导入。")
+                library.error(player.currentMediaItem?.mediaId, "无法播放「${player.currentMediaItem?.mediaMetadata?.title ?: "音频"}」。文件可能已移动、权限失效或格式不支持，请移除后重新导入。")
                 player.pause()
                 savePosition()
             }
@@ -63,7 +63,7 @@ class MusicService : MediaSessionService() {
         fun pauseForReminder(context: Context) {
             // Receiver and service share the main process: pause completes before the chime notification.
             instance?.let { it.player.pause(); it.savePosition() }
-            MusicLibrary(context).error(null)
+
         }
     }
 }

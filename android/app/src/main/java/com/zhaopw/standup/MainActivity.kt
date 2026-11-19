@@ -6,259 +6,111 @@ import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.net.Uri
-import android.os.Build
-import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.os.SystemClock
+import android.os.*
 import android.provider.Settings
 import android.text.InputType
-import android.view.Gravity
-import android.view.View
-import android.view.WindowInsets
 import android.widget.*
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
-import androidx.media3.common.C
-import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 
-class MainActivity : Activity() {
-    private lateinit var repository: TimerRepository
-    private lateinit var library: MusicLibrary
-    private lateinit var countdown: TextView
-    private lateinit var phase: TextView
-    private lateinit var minutes: EditText
-    private lateinit var start: Button
-    private lateinit var pause: Button
-    private lateinit var permissionInfo: TextView
-    private lateinit var musicInfo: TextView
-    private lateinit var trackList: LinearLayout
-    private lateinit var play: Button
-    private lateinit var seek: SeekBar
-    private lateinit var progress: TextView
-    private var controller: MediaController? = null
-    private var controllerFuture: ListenableFuture<MediaController>? = null
-    private val handler = Handler(Looper.getMainLooper())
-    private var dragging = false
-    private var visible = false
-    private val tick = object : Runnable {
-        override fun run() { if (visible) { update(); handler.postDelayed(this, 500) } }
-    }
-    private fun dp(value: Int) = (value * resources.displayMetrics.density).toInt()
-    private fun column() = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-    private fun row() = LinearLayout(this).apply {
-        orientation = if (resources.configuration.fontScale > 1.3f) LinearLayout.VERTICAL else LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-    }
-    private fun label(text: String, size: Float = 16f) = TextView(this).apply { this.text = text; textSize = size; setTextColor(Color.rgb(55,55,55)); setPadding(0,dp(6),0,dp(6)) }
-    private fun button(text: String, action: () -> Unit) = Button(this).apply {
-        this.text = text; isAllCaps = false; minHeight = dp(48); minimumWidth = dp(48); setOnClickListener { action() }
-    }
-    private fun LinearLayout.equal(view: View) {
-        addView(view, if (orientation == LinearLayout.VERTICAL) LinearLayout.LayoutParams(-1,-2)
-        else LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
-    }
-    private fun card() = column().apply {
-        setPadding(dp(18),dp(16),dp(18),dp(16))
-        background = GradientDrawable().apply { setColor(Color.WHITE); cornerRadius = dp(20).toFloat(); setStroke(dp(1), Color.rgb(230,230,230)) }
-        layoutParams = LinearLayout.LayoutParams(-1,-2).apply { bottomMargin = dp(18) }
-    }
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        repository = TimerRepository(this)
-        library = MusicLibrary(this)
-        Notifications(this).createChannels()
-        window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        val scroll = ScrollView(this).apply { isFillViewport = true; setBackgroundColor(Color.rgb(248,248,248)) }
-        val content = column().apply { setPadding(dp(20),dp(20),dp(20),dp(24)) }
-        scroll.addView(content)
-        scroll.setOnApplyWindowInsetsListener { view, insets ->
-            if (Build.VERSION.SDK_INT >= 30) {
-                val safe = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout() or WindowInsets.Type.ime())
-                view.setPadding(safe.left,safe.top,safe.right,safe.bottom)
-            } else {
-                @Suppress("DEPRECATION")
-                view.setPadding(insets.systemWindowInsetLeft,insets.systemWindowInsetTop,insets.systemWindowInsetRight,insets.systemWindowInsetBottom)
-            }
-            insets
-        }
-        setContentView(scroll)
-        applySystemBarAppearance()
-        content.addView(label("stand up", 30f).apply { setTypeface(null,Typeface.BOLD) })
-        content.addView(label("留一点时间，起来走走。", 16f))
-        content.addView(card().apply {
-            phase = label("准备开始").apply { gravity = Gravity.CENTER }; addView(phase)
-            countdown = label("30:00", 56f).apply { gravity = Gravity.CENTER; typeface = Typeface.MONOSPACE; contentDescription = "剩余时间" }; addView(countdown)
-            addView(label("设置倒计时（分钟）"))
-            minutes = EditText(this@MainActivity).apply {
-                id = View.generateViewId(); setText((repository.read().duration / 60000).toString())
-                inputType = InputType.TYPE_CLASS_NUMBER; setSingleLine(); hint = "1–999 分钟"; minHeight = dp(48)
-                contentDescription = "倒计时时长，1到999整数分钟"
-            }; addView(minutes)
-            addView(row().apply { listOf(15,30,45,60).forEach { value -> equal(button("$value") { minutes.setText(value.toString()) }) } })
-            addView(row().apply {
-                start = button("开始") {
-                    val state = repository.read()
-                    val duration = if (state.phase == Phase.PAUSED) (state.duration / 60000).toInt() else validMinutes() ?: return@button
-                    repository.start(duration); update()
-                }; equal(start)
-                pause = button("暂停") { repository.pause(); update() }; equal(pause)
-                equal(button("重置") { validMinutes()?.let { repository.reset(it); update() } })
-            })
-            addView(label("暂停后继续会保留剩余时间；重置会采用上面填写的新时长。", 13f))
-        })
-        content.addView(card().apply {
-            addView(label("通知与后台提醒", 20f))
-            permissionInfo = label(""); addView(permissionInfo)
-            addView(button("允许通知 / 打开通知设置") {
-                val uiPrefs = getSharedPreferences("ui", MODE_PRIVATE)
-                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED &&
-                    (!uiPrefs.getBoolean("notificationAsked", false) || shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS))) {
-                    uiPrefs.edit().putBoolean("notificationAsked", true).apply()
-                    requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 42)
-                } else startActivity(Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                    .putExtra(Settings.EXTRA_CHANNEL_ID, Notifications.DUE_CHANNEL))
-            })
-            if (Build.VERSION.SDK_INT >= 31) addView(button("允许准确提醒") {
-                runCatching { startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName"))) }
-                    .onFailure { message("无法打开准确提醒设置，请在系统设置中搜索本应用的闹钟和提醒权限。") }
-            })
-            addView(label("到时暂停本应用音乐，播放一次提示音。通知可在锁屏显示，声音遵循手机静音与勿扰设置；部分手机还需允许后台运行。", 13f))
-        })
-        content.addView(card().apply {
-            addView(label("陪你专注的音乐", 20f))
-            musicInfo = label("正在连接播放器…"); addView(musicInfo)
-            progress = label("00:00 / 00:00", 13f); addView(progress)
-            seek = SeekBar(this@MainActivity).apply {
-                max = 1000; minimumHeight = dp(48); contentDescription = "音乐播放进度"
-                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                    override fun onStartTrackingTouch(bar: SeekBar) { dragging = true }
-                    override fun onStopTrackingTouch(bar: SeekBar) { controller?.let { if (it.duration > 0) it.seekTo(it.duration * bar.progress / 1000) }; dragging = false }
-                    override fun onProgressChanged(bar: SeekBar, value: Int, fromUser: Boolean) {
-                        if (fromUser && !dragging) controller?.let { if (it.duration > 0) it.seekTo(it.duration * value / 1000) }
-                    }
-                })
-            }; addView(seek)
-            addView(row().apply {
-                equal(button("上一首") { controller?.seekToPreviousMediaItem() })
-                play = button("播放") { controller?.let { if (it.isPlaying) it.pause() else { if (it.playbackState == Player.STATE_ENDED) it.seekTo(0); it.prepare(); it.play() } } }; equal(play)
-                equal(button("下一首") { controller?.seekToNextMediaItem() })
-            })
-            addView(label("播放方式"))
-            addView(Spinner(this@MainActivity).apply {
-                minimumHeight = dp(48)
-                adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("顺序播放", "单曲循环", "列表循环"))
-                setSelection(library.mode.coerceIn(0,2))
-                onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-                    override fun onNothingSelected(parent: AdapterView<*>?) { }
-                    override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) { library.mode = position; controller?.repeatMode = position }
-                }
-            })
-            trackList = column(); addView(trackList)
-            addView(button("＋ 导入手机里的音频") {
-                startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("audio/*").addCategory(Intent.CATEGORY_OPENABLE)
-                    .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION), 41)
-            })
-        })
-        controllerFuture = MediaController.Builder(this, SessionToken(this, ComponentName(this, MusicService::class.java))).buildAsync().also { future ->
-            future.addListener({
-                if (isDestroyed) return@addListener
-                runCatching { future.get() }.onSuccess { controller = it; it.repeatMode = library.mode; refreshTracks(); update() }
-                    .onFailure { musicInfo.text = "播放器连接失败，请关闭应用后重试。" }
-            }, ContextCompat.getMainExecutor(this))
-        }
-        refreshTracks()
-    }
-    private fun validMinutes(): Int? = parseMinutes(minutes.text.toString()).also {
-        if (it == null) { minutes.error = "请输入 1–999 的整数分钟"; minutes.requestFocus() } else minutes.error = null
-    }
-    private fun applySystemBarAppearance() {
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = true
-            isAppearanceLightNavigationBars = true
-        }
-    }
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) applySystemBarAppearance()
-    }
-    override fun onResume() { super.onResume(); applySystemBarAppearance(); visible = true; repository.refreshSchedule(); handler.post(tick) }
-    override fun onPause() { visible = false; handler.removeCallbacks(tick); super.onPause() }
-    override fun onDestroy() { controllerFuture?.let { MediaController.releaseFuture(it) }; super.onDestroy() }
-    private fun update() {
-        val state = repository.read()
-        if (repository.deliver(state.generation)) { update(); return }
-        countdown.text = formatRemaining(state.remaining(SystemClock.elapsedRealtime()))
-        // Expose the actual time on focus, without a live region announcing every tick.
-        countdown.contentDescription = "剩余时间 ${countdown.text}"
-        phase.text = when (state.phase) { Phase.IDLE -> "准备开始"; Phase.RUNNING -> "专注中，记得照顾身体"; Phase.PAUSED -> "计时已暂停"; Phase.DUE -> "该起身活动一下了" }
-        start.text = if (state.phase == Phase.PAUSED) "继续" else "开始"
-        start.isEnabled = state.phase != Phase.RUNNING
-        pause.isEnabled = state.phase == Phase.RUNNING
-        val notifications = Notifications(this).remindersAllowed()
-        val exact = AlarmScheduler(this).exactAllowed()
-        permissionInfo.text = buildString {
-            if (repository.rebootNotice()) append("手机已重启，之前的计时已取消。请重新开始。\n")
-            append(if (notifications) "✓ 起身提醒通知已允许" else "⚠ 起身提醒通知未允许：后台到时将无法显示或播放提醒，请点击下方允许通知，并开启起身提醒通知类别。")
-            append("\n")
-            append(if (exact) "✓ 准确提醒已允许" else "⚠ 准确提醒未允许：后台提醒可能延迟，请点击下方允许准确提醒。")
-        }
-        controller?.let { player ->
-            play.text = if (player.isPlaying) "暂停" else "播放"
-            val error = library.error()
-            musicInfo.text = error ?: player.currentMediaItem?.mediaMetadata?.title ?: "选择一首音乐"
-            val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0
-            progress.text = "${formatRemaining(player.currentPosition)} / ${formatRemaining(duration)}"
-            seek.isEnabled = duration > 0
-            if (!dragging) seek.progress = if (duration > 0) (player.currentPosition * 1000 / duration).toInt() else 0
-        }
-    }
-    private fun refreshTracks() {
-        trackList.removeAllViews()
-        library.tracks().forEach { track ->
-            trackList.addView(row().apply {
-                equal(button(track.title) {
-                    controller?.let { player ->
-                        val index = library.tracks().indexOfFirst { it.uri == track.uri }
-                        player.seekTo(index, 0); library.error(null); player.prepare(); player.play()
-                    }
-                })
-                if (library.removable(track)) addView(button("移除") {
-                    AlertDialog.Builder(this@MainActivity).setTitle("移除这首音乐？").setMessage(track.title)
-                        .setNegativeButton("取消",null).setPositiveButton("移除") { _,_ ->
-                            val player = controller
-                            val index = library.tracks().indexOfFirst { it.uri == track.uri }
-                            if (player != null && index >= 0) player.removeMediaItem(index)
-                            library.remove(track); refreshTracks()
-                        }.show()
-                })
-            })
-        }
-    }
-    @Deprecated("Activity result API used without an additional UI framework")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode,resultCode,data)
-        if (requestCode != 41 || resultCode != RESULT_OK || data == null) return
-        val uris = data.clipData?.let { clip -> (0 until clip.itemCount).map { clip.getItemAt(it).uri } } ?: listOfNotNull(data.data)
-        val errors = mutableListOf<String>()
-        uris.distinct().forEach { uri -> runCatching { library.import(uri) }.onFailure { errors.add("${uri.lastPathSegment ?: "音频"}：无法保留访问权限或读取文件") } }
-        controller?.let { player ->
-            val selected = player.currentMediaItem?.mediaId
-            val position = player.currentPosition
-            val tracks = library.tracks()
-            player.setMediaItems(tracks.map { it.mediaItem() }, tracks.indexOfFirst { it.uri == selected }.coerceAtLeast(0), position)
-            player.prepare()
-        }
-        refreshTracks()
-        if (errors.isNotEmpty()) message(errors.joinToString("\n"))
-    }
-    private fun message(text: String) { AlertDialog.Builder(this).setMessage(text).setPositiveButton("知道了",null).show() }
+class MainActivity:Activity() {
+ private lateinit var repository:TimerRepository
+ private lateinit var library:MusicLibrary
+ private lateinit var ui:Ui
+ private lateinit var screen:TimerScreen
+ private var sheet:MusicSheet?=null
+ private var permissions:PermissionPage?=null
+ private var controller:MediaController?=null
+ private var future:ListenableFuture<MediaController>?=null
+ private val handler=Handler(Looper.getMainLooper())
+ private var visible=false
+ private var selected=30
+ private val prefs by lazy { getSharedPreferences("ui",MODE_PRIVATE) }
+ private val tick=object:Runnable { override fun run() { if(visible) { update(); handler.postDelayed(this,500) } } }
+ override fun onCreate(savedInstanceState:Bundle?) {
+  super.onCreate(savedInstanceState)
+  repository=TimerRepository(this); library=MusicLibrary(this); ui=Ui(this)
+  selected=prefs.getInt("selectedMinutes",(repository.read().duration/60000).toInt()).coerceIn(1,999)
+  Notifications(this).createChannels(); WindowCompat.setDecorFitsSystemWindows(window,false)
+  window.statusBarColor=Color.TRANSPARENT; window.navigationBarColor=Color.TRANSPARENT
+  screen=TimerScreen(ui,::showPermissions,::primary,::secondary,::adjust,::select,::custom,::showMusic,{ toggleMusic(controller); update() },{ repository.clearRebootNotice(); update() })
+  val scroll=ScrollView(this).apply { isFillViewport=true; setBackgroundColor(Palette.bg); addView(screen.content) }; ui.insets(scroll); setContentView(scroll); bars()
+  future=MediaController.Builder(this,SessionToken(this,ComponentName(this,MusicService::class.java))).buildAsync().also { f->f.addListener({
+   if(!isDestroyed) runCatching { f.get() }.onSuccess { controller=it; update() }.onFailure { screen.musicTitle.text="播放器连接失败，重新打开应用重试" }
+  },ContextCompat.getMainExecutor(this)) }
+  update()
+ }
+ private fun bars() { WindowCompat.getInsetsController(window,window.decorView).apply { isAppearanceLightStatusBars=true; isAppearanceLightNavigationBars=true } }
+ override fun onWindowFocusChanged(hasFocus:Boolean) { super.onWindowFocusChanged(hasFocus); if(hasFocus) bars() }
+ override fun onResume() { super.onResume(); visible=true; repository.refreshSchedule(); handler.post(tick); permissions?.refresh(); bars() }
+ override fun onPause() { visible=false; handler.removeCallbacks(tick); super.onPause() }
+ override fun onDestroy() { sheet?.dialog?.dismiss(); permissions?.dismiss(); future?.let { MediaController.releaseFuture(it) }; super.onDestroy() }
+ private fun select(value:Int) { selected=value; prefs.edit().putInt("selectedMinutes",value).apply(); update() }
+ private fun primary() {
+  val state=repository.read()
+  when(state.phase) {
+   Phase.RUNNING->repository.pause()
+   Phase.PAUSED->repository.start(selected)
+   Phase.DUE->repository.acknowledge(state.generation,selected)
+   Phase.IDLE-> {
+    if(!ready() && !prefs.getBoolean("firstStartExplained",false)) {
+     prefs.edit().putBoolean("firstStartExplained",true).apply()
+     AlertDialog.Builder(this).setTitle("让后台提醒更可靠").setMessage("通知用于到时提醒，准确提醒用于减少后台延迟。你也可以先开始计时，稍后再设置。")
+      .setNegativeButton("先开始计时") { _,_-> if(repository.read().phase==Phase.IDLE) { repository.start(selected); update() } }
+      .setPositiveButton("了解并设置") { _,_-> showPermissions() }.show()
+    } else repository.start(selected)
+   }
+  }; update()
+ }
+ private fun secondary() { val snapshot=repository.read(); confirm(snapshot,if(snapshot.phase==Phase.PAUSED) "重新开始这一轮？" else "结束这一轮？",if(snapshot.phase==Phase.PAUSED) "将放弃当前进度，按所选 $selected 分钟重新开始。" else "当前计时进度将被清除。") {
+  repository.reset(selected); if(snapshot.phase==Phase.PAUSED) repository.start(selected)
+ } }
+ private fun confirm(snapshot:TimerState,title:String,detail:String,action:()->Unit) {
+  AlertDialog.Builder(this).setTitle(title).setMessage(detail).setNegativeButton("取消",null).setPositiveButton("确认") { _,_->
+   repository.deliver(snapshot.generation)
+   if(canConfirmTimerChange(snapshot,repository.read(),SystemClock.elapsedRealtime())) action()
+   update()
+  }.show()
+ }
+ private fun custom()=durationDialog(false)
+ private fun adjust()=durationDialog(repository.read().phase==Phase.RUNNING)
+ private fun durationDialog(restart:Boolean) {
+  val snapshot=repository.read()
+  val input=EditText(this).apply { tag="duration_input"; inputType=InputType.TYPE_CLASS_NUMBER; setSingleLine(); setText(selected.toString()); selectAll(); hint="1–999"; contentDescription="倒计时时长，1到999整数分钟"; minHeight=ui.dp(48) }
+  val wrap=ui.column().apply { setPadding(ui.dp(24),ui.dp(8),ui.dp(24),0); addView(input) }
+  val dialog=AlertDialog.Builder(this).setTitle(if(restart) "调整本轮时长" else "自定义时长（分钟）").setView(wrap).setNegativeButton("取消",null).setPositiveButton("确定",null).create()
+  dialog.setOnShowListener { dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+   val value=parseMinutes(input.text.toString())
+   if(value==null) { input.error="请输入 1–999 的整数分钟"; return@setOnClickListener }
+   dialog.dismiss()
+   if(restart) confirm(snapshot,"重新开始计时？","将放弃当前进度，重新计时 $value 分钟。") { select(value); repository.reset(value); repository.start(value) }
+   else if(canConfirmTimerChange(snapshot,repository.read(),SystemClock.elapsedRealtime())) select(value)
+  } }; dialog.show()
+ }
+ private fun ready()=Notifications(this).remindersAllowed() && AlarmScheduler(this).exactAllowed()
+ private fun showPermissions() { permissions?.dismiss(); permissions=PermissionPage(this); permissions?.show() }
+ private fun showMusic() { sheet?.dialog?.dismiss(); sheet=MusicSheet(this,library,{controller},::importMusic); sheet?.show() }
+ private fun importMusic() { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("audio/*").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION),41) }
+ private fun update() {
+  var state=repository.read(); if(repository.deliver(state.generation)) state=repository.read()
+  screen.render(state,selected,SystemClock.elapsedRealtime(),ready(),repository.rebootNotice())
+  controller?.let { p-> screen.musicTitle.text=library.trackError(p.currentMediaItem?.mediaId) ?: p.currentMediaItem?.mediaMetadata?.title ?: "选择一首音乐"
+   screen.musicPlay.setImageResource(if(p.isPlaying) R.drawable.ic_pause else R.drawable.ic_play); screen.musicPlay.contentDescription=if(p.isPlaying) "暂停音乐" else "播放音乐" }
+  if(sheet?.dialog?.isShowing==true) sheet?.update()
+ }
+ @Deprecated("Native document picker")
+ override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?) {
+  super.onActivityResult(requestCode,resultCode,data); if(requestCode!=41 || resultCode!=RESULT_OK || data==null) return
+  val uris=data.clipData?.let { c->(0 until c.itemCount).map { c.getItemAt(it).uri } } ?: listOfNotNull(data.data)
+  val errors=mutableListOf<String>(); var imported=false
+  uris.distinct().forEach { uri->runCatching { library.import(uri); imported=true }.onFailure { errors.add("无法读取音频或保留访问权限，请重新选择文件。") } }
+  if(imported) controller?.let { p->val selected=p.currentMediaItem?.mediaId; val position=p.currentPosition; val playing=p.playWhenReady; val tracks=library.tracks()
+   p.setMediaItems(tracks.map { it.mediaItem() },tracks.indexOfFirst { it.uri==selected }.coerceAtLeast(0),position); p.prepare(); p.playWhenReady=playing
+  }
+  sheet?.update(); update(); if(errors.isNotEmpty()) AlertDialog.Builder(this).setMessage(errors.joinToString("\n")).setPositiveButton("知道了",null).show()
+ }
 }

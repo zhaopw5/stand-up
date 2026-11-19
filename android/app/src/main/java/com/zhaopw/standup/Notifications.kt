@@ -41,10 +41,10 @@ class Notifications(private val context: Context) {
             .setUsesChronometer(true).setChronometerCountDown(true).setShowWhen(true)
         if (allowed()) manager.notify(TIMER_ID, notification.build())
     }
-    fun due() {
+    fun due(generation: Long = TimerRepository(context).read().generation) {
         createChannels()
         cancelRunning()
-        val ack = PendingIntent.getBroadcast(context, 2, Intent(context, ReminderReceiver::class.java).setAction(ACK), PendingIntent.FLAG_IMMUTABLE)
+        val ack = PendingIntent.getBroadcast(context, 2, Intent(context, ReminderReceiver::class.java).setAction(ACK).setData(Uri.parse("standup://ack/$generation")).putExtra("generation", generation), PendingIntent.FLAG_IMMUTABLE)
         if (allowed()) manager.notify(DUE_ID, builder(DUE_CHANNEL).setContentTitle("该起身活动一下了")
             .setContentText("站起来，走几步，让身体休息一下。音乐已暂停。")
             .setAutoCancel(true).addAction(Notification.Action.Builder(null, "知道了", ack).build()).build())

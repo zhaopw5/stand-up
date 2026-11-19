@@ -52,6 +52,19 @@ class TimerRepository(private val context: Context) {
         Notifications(context).running(next)
         next
     }
+    // Validate and transition under one lock so an old card cannot affect a newer run.
+    fun notificationAction(action: String, generation: Long): Boolean = synchronized(lock) {
+        val current = read()
+        val expected = when (action) {
+            Notifications.PAUSE -> Phase.RUNNING
+            Notifications.RESUME -> Phase.PAUSED
+            else -> return@synchronized false
+        }
+        if (current.generation != generation || current.phase != expected) return@synchronized false
+        if (deliver(current.generation)) return@synchronized true
+        if (expected == Phase.RUNNING) pause() else start((current.duration / 60000L).toInt().coerceIn(1,999))
+        true
+    }
     fun reset(minutes: Int): TimerState = synchronized(lock) {
         val next = read().reset(minutes)
         save(next)
@@ -109,7 +122,9 @@ class ReminderReceiver : BroadcastReceiver() {
             val repo = TimerRepository(context); val selected = context.getSharedPreferences("ui", Context.MODE_PRIVATE).getInt("selectedMinutes", 30).coerceIn(1,999)
             repo.acknowledge(intent.getLongExtra("generation", -1), selected)
         }
-        else TimerRepository(context).deliver(intent.getLongExtra("generation", -1))
+        else if (intent.action == Notifications.PAUSE || intent.action == Notifications.RESUME)
+            TimerRepository(context).notificationAction(intent.action!!, intent.getLongExtra("generation", -1))
+        else if (intent.action == "com.zhaopw.standup.ALARM") TimerRepository(context).deliver(intent.getLongExtra("generation", -1))
     }
 }
 class BootReceiver : BroadcastReceiver() {

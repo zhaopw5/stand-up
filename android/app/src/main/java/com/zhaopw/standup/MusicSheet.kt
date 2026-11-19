@@ -18,7 +18,8 @@ internal class MusicSheet(private val context:Context,private val library:MusicL
  private val progress=ui.text("",13f)
  private val play=ui.icon(R.drawable.ic_play,"播放音乐","sheet_play") { toggleMusic(player()) }
  private val tracks=ui.column()
- val seek=SeekBar(context).apply { tag="music_seek"; max=1000; minimumHeight=ui.dp(48); contentDescription="音乐播放进度" }
+ val seek=SeekBar(context).apply { tag="music_seek"; max=1000; progressTintList=android.content.res.ColorStateList.valueOf(Palette.brand); progressBackgroundTintList=android.content.res.ColorStateList.valueOf(Palette.soft); thumbTintList=android.content.res.ColorStateList.valueOf(Palette.dark); minimumHeight=ui.dp(48); contentDescription="音乐播放进度" }
+ private val modeButtons=mutableListOf<Button>()
  private var dragging=false
  private var signature=""
  init {
@@ -33,11 +34,17 @@ internal class MusicSheet(private val context:Context,private val library:MusicL
    override fun onProgressChanged(bar:SeekBar,value:Int,fromUser:Boolean) { if(fromUser && !dragging) move(value) }
   })
   body.addView(ui.text("播放方式",14f,Palette.ink))
-  body.addView(Spinner(context).apply {
-   contentDescription="播放方式"; minimumHeight=ui.dp(48)
-   adapter=ArrayAdapter(context,android.R.layout.simple_spinner_dropdown_item,listOf("顺序播放","单曲循环","列表循环")); setSelection(library.mode.coerceIn(0,2))
-   onItemSelectedListener=object:AdapterView.OnItemSelectedListener { override fun onNothingSelected(p:AdapterView<*>?) {} ; override fun onItemSelected(p:AdapterView<*>?,v:View?,position:Int,id:Long) { library.mode=position; player()?.repeatMode=position } }
-  })
+  val modes=ui.row().apply {
+   if(context.resources.configuration.fontScale>1.2f || context.resources.configuration.screenWidthDp<360) orientation=LinearLayout.VERTICAL
+  }
+  listOf("顺序播放","单曲循环","列表循环").forEachIndexed { mode,label ->
+   val button=ui.button(label,false,"music_mode_$mode") {
+    library.mode=mode; player()?.repeatMode=mode; updateModes()
+   }.apply { contentDescription=label }
+   modeButtons.add(button)
+   if(modes.orientation==LinearLayout.VERTICAL) modes.addView(button,LinearLayout.LayoutParams(-1,-2)) else ui.equal(modes,button)
+  }
+  body.addView(modes); updateModes()
   body.addView(ui.text("我的曲库",16f,Palette.ink)); body.addView(tracks)
   body.addView(ui.button("导入手机里的音频",true,"music_import",import),LinearLayout.LayoutParams(-1,-2))
   container.addView(ScrollView(context).apply { addView(body); isFillViewport=false },LinearLayout.LayoutParams(-1,0,1f))
@@ -51,7 +58,15 @@ internal class MusicSheet(private val context:Context,private val library:MusicL
  }
  fun show() { dialog.show(); dialog.window?.setLayout(-1,(context.resources.displayMetrics.heightPixels*.88).toInt()); update() }
  private fun move(value:Int) { player()?.let { if(it.duration>0) it.seekTo(it.duration*value/1000) } }
+ private fun updateModes() {
+  val mode=player()?.repeatMode ?: library.mode.coerceIn(0,2)
+  modeButtons.forEachIndexed { index,button ->
+   button.isSelected=index==mode
+   button.background=android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x222D672F),ui.shape(if(button.isSelected) Palette.soft else Color.TRANSPARENT,12),null)
+  }
+ }
  fun update() {
+  updateModes()
   val p=player(); title.text=p?.currentMediaItem?.mediaMetadata?.title ?: "选择一首音乐"
   val duration=p?.duration?.takeIf { it!=C.TIME_UNSET && it>0 } ?: 0L
   progress.text="${formatRemaining(p?.currentPosition ?: 0)} / ${formatRemaining(duration)}"
@@ -64,7 +79,7 @@ internal class MusicSheet(private val context:Context,private val library:MusicL
    val card=ui.column().apply { setPadding(0,ui.dp(6),0,ui.dp(10)) }
    card.addView(ui.button(track.title,false,"track_${track.uri}") {
     player()?.let { val index=library.tracks().indexOfFirst { t->t.uri==track.uri }; it.seekTo(index,0); it.prepare(); it.play() }
-   }.apply { gravity=Gravity.START; isSelected=p?.currentMediaItem?.mediaId==track.uri })
+   }.apply { gravity=Gravity.START; isSelected=p?.currentMediaItem?.mediaId==track.uri; background=ui.shape(if(isSelected) Palette.soft else Color.TRANSPARENT,12) })
    library.trackError(track.uri)?.let { error ->
     card.addView(ui.text(error,13f,Color.rgb(153,62,55)))
     card.addView(ui.row().apply {

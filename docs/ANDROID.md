@@ -42,3 +42,7 @@ cd android
 生成的 release APK 默认未签名。使用 `scripts/build_android.ps1`，指定私有 keystore 与密码文件签名；或通过 GitHub Actions 中的 `ANDROID_RELEASE_KEYSTORE`（PKCS12 的 Base64）与 `ANDROID_RELEASE_PASSWORD` 两个仓库 secrets 构建。密钥 alias 为 `stand-up`。密钥及密码不得提交到仓库。
 
 后续覆盖安装必须使用同一签名密钥，请备份私有密钥。CI 会运行计时单元测试、静态检查、安卓 16 模拟器测试和 APK 签名校验。模拟器检查不等同于 Redmi 真机、省电策略及可听音效验证。
+
+## v1.6.1 山野主题
+
+暂停时，「当前轮剩余」是继续后的时间，「下一轮时长」只影响新一轮；更改预设不会重置暂停轮次。音乐库中的三个播放模式始终可见，浅绿色表示当前选择。

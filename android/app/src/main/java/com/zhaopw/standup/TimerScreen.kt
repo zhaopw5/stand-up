@@ -10,11 +10,13 @@ internal class TimerScreen(private val ui:Ui,settings:()->Unit,primary:()->Unit,
  private var lastSelection:Int?=null
  val content=ui.column().apply { setPadding(ui.dp(24),ui.dp(18),ui.dp(24),ui.dp(24)) }
  private val timer=ui.card()
- private val status=ui.text("",14f,Palette.brand).apply { gravity=Gravity.CENTER }
+ private val status=ui.text("",14f,Palette.dark).apply { gravity=Gravity.CENTER }
  val countdown=ui.text("30:00",60f,Palette.ink).apply { gravity=Gravity.CENTER; typeface=Typeface.create("sans-serif-medium",Typeface.NORMAL); fontFeatureSettings="tnum"; maxLines=1; tag="countdown" }
  private val roundTotal=ui.text("",14f).apply { gravity=Gravity.CENTER }
  private val timerProgress=ProgressBar(ui.context,null,android.R.attr.progressBarStyleHorizontal).apply { max=1000; progressTintList=android.content.res.ColorStateList.valueOf(Palette.brand); progressBackgroundTintList=android.content.res.ColorStateList.valueOf(Palette.soft); contentDescription="本轮进度" }
  private val detail=ui.text("到时提醒你离开屏幕，活动一下。",14f).apply { gravity=Gravity.CENTER }
+ private val pausedRemaining=ui.text("",14f,Palette.ink).apply { gravity=Gravity.CENTER; tag="paused_remaining" }
+ private val nextDuration=ui.text("",14f,Palette.dark).apply { gravity=Gravity.CENTER; tag="next_duration" }
  private val durations=ui.column()
  private val presetButtons=mutableMapOf<Int,Button>()
  private val primaryButton=ui.button("开始专注",true,"timer_primary",primary)
@@ -22,7 +24,7 @@ internal class TimerScreen(private val ui:Ui,settings:()->Unit,primary:()->Unit,
  private val endButton=ui.button("结束本轮",false,"timer_end",end)
  private val adjustButton=ui.button("调整时长",false,"timer_adjust",adjust)
  private val breakIcon=ui.icon(R.drawable.ic_break,"起身休息") {}.apply { isClickable=false; isFocusable=false }
- private val musicCard=ui.card()
+ private val musicCard=ui.card().apply { background=ui.shape(Palette.surfaceSoft).apply { setStroke(ui.dp(1),Palette.line) } }
  private lateinit var musicHeading:LinearLayout
  val musicTitle=ui.text("慢步 · 内置音乐",15f,Palette.ink)
  val musicPlay=ui.icon(R.drawable.ic_play,"播放音乐","music_play",toggle)
@@ -34,7 +36,7 @@ internal class TimerScreen(private val ui:Ui,settings:()->Unit,primary:()->Unit,
    addView(ui.icon(R.drawable.ic_settings,"提醒设置","settings",settings))
   },LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=ui.dp(20) })
   timer.addView(breakIcon,LinearLayout.LayoutParams(ui.dp(64),ui.dp(64)).apply { gravity=Gravity.CENTER; bottomMargin=ui.dp(16) })
-  timer.addView(status); timer.addView(countdown); countdown.setAutoSizeTextTypeUniformWithConfiguration((48/ui.context.resources.configuration.fontScale).toInt().coerceAtMost(48),60,2,android.util.TypedValue.COMPLEX_UNIT_SP); timer.addView(roundTotal); timer.addView(timerProgress,LinearLayout.LayoutParams(-1,ui.dp(4)).apply { topMargin=ui.dp(12); bottomMargin=ui.dp(12) }); timer.addView(detail)
+  timer.addView(status); timer.addView(countdown); countdown.setAutoSizeTextTypeUniformWithConfiguration((48/ui.context.resources.configuration.fontScale).toInt().coerceAtMost(48),60,2,android.util.TypedValue.COMPLEX_UNIT_SP); timer.addView(roundTotal); timer.addView(timerProgress,LinearLayout.LayoutParams(-1,ui.dp(4)).apply { topMargin=ui.dp(12); bottomMargin=ui.dp(12) }); timer.addView(detail); timer.addView(pausedRemaining); timer.addView(nextDuration)
   val groups=if(ui.context.resources.configuration.fontScale>1.2f || ui.context.resources.configuration.screenWidthDp<360) listOf(listOf(15,30),listOf(45,60)) else listOf(listOf(15,30,45,60))
   groups.forEach { group-> durations.addView(ui.row().apply { group.forEach { n -> ui.equal(this,ui.button("$n 分",false,"preset_$n") { select(n) }.also { presetButtons[n]=it }) } }) }
   durations.addView(ui.button("自定义时长",false,"duration_custom",custom),LinearLayout.LayoutParams(-1,-2))
@@ -61,7 +63,11 @@ internal class TimerScreen(private val ui:Ui,settings:()->Unit,primary:()->Unit,
    status.typeface=if(due) Typeface.create("sans-serif-medium",Typeface.NORMAL) else Typeface.DEFAULT
   }; countdown.text=formatRemaining(model.remaining); countdown.contentDescription="剩余时间 ${countdown.text}"
   primaryButton.text=model.primary; countdown.visibility=if(due) View.GONE else View.VISIBLE; breakIcon.visibility=if(due) View.VISIBLE else View.GONE
-  detail.text=when(state.phase) { Phase.DUE->"离开屏幕一会儿，站起来走几步。\n让眼睛和身体都放松一下。\n\n背景音乐已暂停"; Phase.PAUSED->"继续会保留剩余时间 · 所选时长用于下一轮"; else->"到时提醒你离开屏幕，活动一下。" }
+  detail.text=when(state.phase) { Phase.DUE->"离开屏幕一会儿，站起来走几步。\n让眼睛和身体都放松一下。\n\n背景音乐已暂停"; Phase.PAUSED->"继续专注将保留当前轮剩余时间。"; else->"到时提醒你离开屏幕，活动一下。" }
+  pausedRemaining.text="当前轮剩余 ${formatRemaining(model.remaining)}"; pausedRemaining.visibility=if(state.phase==Phase.PAUSED) View.VISIBLE else View.GONE
+  nextDuration.text="下一轮时长 $selected 分钟"; nextDuration.visibility=if(state.phase==Phase.PAUSED) View.VISIBLE else View.GONE
+  endButton.setTextColor(if(state.phase==Phase.RUNNING) Palette.muted else Palette.dark)
+  endButton.textSize=if(state.phase==Phase.RUNNING) 13f else 14f
   durations.visibility=if(model.showDurations) View.VISIBLE else View.GONE
   secondary.visibility=if(state.phase==Phase.RUNNING || state.phase==Phase.PAUSED) View.VISIBLE else View.GONE
   endButton.text=if(state.phase==Phase.PAUSED) "重新开始" else "结束本轮"

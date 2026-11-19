@@ -6,8 +6,8 @@ android {
         applicationId = "com.zhaopw.standup"
         minSdk = 26
         targetSdk = 36
-        versionCode = 16000
-        versionName = "1.6.0"
+        versionCode = 16001
+        versionName = "1.6.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }

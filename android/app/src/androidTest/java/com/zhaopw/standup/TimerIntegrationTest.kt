@@ -180,6 +180,8 @@ class TimerIntegrationTest {
                 val remaining=TimerRepository(context).read().savedRemaining
                 control(a,"preset_60").performClick()
                 assertEquals(remaining,TimerRepository(context).read().savedRemaining)
+                assertEquals("当前轮剩余 ${formatRemaining(remaining)}",(control(a,"paused_remaining") as TextView).text.toString())
+                assertEquals("下一轮时长 60 分钟",(control(a,"next_duration") as TextView).text.toString())
                 control(a,"timer_primary").performClick()
                 assertEquals(remaining,TimerRepository(context).read().savedRemaining)
             }
@@ -368,4 +370,44 @@ class TimerIntegrationTest {
             assertTrue(MusicLibrary(context).pendingReplacements().isEmpty())
         } finally { prefs.edit().putString("tracks",original).remove("pendingReplacements").putBoolean("sessionSyncPending",false).commit() }
     }
+    @Test fun visibleMusicModesControlSessionAndSurviveRecreation() {
+        if(Build.VERSION.SDK_INT<29) return
+        prepareUi()
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
+        val future=MediaController.Builder(context,SessionToken(context,ComponentName(context,MusicService::class.java))).buildAsync()
+        val player=future.get(20,TimeUnit.SECONDS)
+        try {
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                fun modeButtons(): List<View> {
+                    fun descendants(v:View):List<View> = listOf(v) + if(v is ViewGroup) (0 until v.childCount).flatMap { descendants(v.getChildAt(it)) } else emptyList()
+                    val views=android.view.inspector.WindowInspector.getGlobalWindowViews().flatMap { descendants(it) }
+                    return (0..2).map { mode -> views.single { it.tag=="music_mode_$mode" } }
+                }
+                step(scenario) { control(it,"music_library").performClick() }
+                listOf(1,2,0,2).forEach { mode ->
+                    val changed=CountDownLatch(1)
+                    instrumentation.runOnMainSync {
+                        player.addListener(object:Player.Listener {
+                            override fun onRepeatModeChanged(repeatMode:Int) { if(repeatMode==mode) changed.countDown() }
+                        })
+                        modeButtons()[mode].performClick()
+                    }
+                    assertTrue("Visible mode must change actual session",changed.await(5,TimeUnit.SECONDS))
+                    step(scenario) {
+                        assertEquals(mode,player.repeatMode)
+                        assertEquals(mode,MusicLibrary(context).mode)
+                        modeButtons().forEachIndexed { index,button ->
+                            assertEquals(index==mode,button.isSelected)
+                            assertTrue(button.height >= (48*context.resources.displayMetrics.density).toInt())
+                            assertTrue(button.contentDescription.toString().isNotBlank())
+                        }
+                    }
+                }
+                scenario.recreate()
+                step(scenario) { control(it,"music_library").performClick() }
+                step(scenario) { assertTrue(modeButtons()[2].isSelected); assertEquals(2,player.repeatMode) }
+            }
+        } finally { instrumentation.runOnMainSync { player.repeatMode=0; MusicLibrary(context).mode=0; player.release() } }
+    }
+
 }

@@ -119,6 +119,24 @@ class LockCardTest {
   assertEquals(fresh, repo.read())
   repo.reset(30)
  }
+ @Test fun largeFontCardReservesRoomForSystemActionByOmittingDecorativeHint() {
+  val repo = ready()
+  val config = android.content.res.Configuration(context.resources.configuration).apply { fontScale = 1.5f }
+  val scaled = context.createConfigurationContext(config)
+  val state = TimerState(phase=Phase.RUNNING, duration=59940000, deadline=SystemClock.elapsedRealtime()+59940000, generation=200)
+  Notifications(scaled).running(state)
+  val notification = posted()
+  assertEquals(1, notification.actions.size)
+  instrumentation.runOnMainSync {
+   val view = notification.bigContentView.apply(scaled, FrameLayout(scaled))
+   val density = scaled.resources.displayMetrics.density
+   view.measure(View.MeasureSpec.makeMeasureSpec((220*density).toInt(), View.MeasureSpec.EXACTLY),
+    View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
+   assertTrue("Large-font body must leave height for the system header and 48dp action", view.measuredHeight <= 140*density)
+   assertEquals(state.deadline, view.findViewById<Chronometer>(R.id.card_clock).base)
+  }
+  repo.reset(30)
+ }
  @Test fun expiredPauseDeliversDueAndOldAcknowledgementCannotResetNewRun() {
   val repo = ready(); repo.start(2)
   val pause = posted().actions[0].actionIntent

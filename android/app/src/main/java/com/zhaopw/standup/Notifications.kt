@@ -52,11 +52,6 @@ class Notifications(private val context: Context) {
                 setChronometerCountDown(R.id.card_clock, true)
                 setChronometer(R.id.card_clock, state.deadline, null, true)
             } else setTextViewText(R.id.card_time, if (due) "该起身了" else formatRemaining(state.savedRemaining))
-            if (expanded) setTextViewText(R.id.card_hint, when {
-                due -> "站起来，走几步，让身体休息一下。"
-                running -> "专注一会儿，也记得照顾身体。"
-                else -> "当前轮剩余 · 继续后接着计时"
-            })
         }
     }
     private fun custom(builder: Notification.Builder, state: TimerState) = builder

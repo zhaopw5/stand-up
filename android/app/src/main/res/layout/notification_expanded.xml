@@ -6,5 +6,4 @@
     </LinearLayout>
     <Chronometer android:id="@+id/card_clock" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="32sp" android:textColor="#0B200F" android:fontFamily="sans-serif-medium"/>
     <TextView android:id="@+id/card_time" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="32sp" android:textColor="#0B200F" android:fontFamily="sans-serif-medium"/>
-    <TextView android:id="@+id/card_hint" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="13sp" android:textColor="#2D672F" android:maxLines="2"/>
 </LinearLayout>

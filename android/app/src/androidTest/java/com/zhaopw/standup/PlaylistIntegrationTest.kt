@@ -122,4 +122,40 @@ class PlaylistIntegrationTest {
   try { instrumentation.runOnMainSync { assertEquals(0,next.mediaItemCount); assertFalse(next.playWhenReady) } }
   finally { instrumentation.runOnMainSync { next.release() }; prefs.edit().clear().commit(); files.forEach { it.delete() } }
  }
+ @Test fun realTouchSeparatesPresetAndCustomDialog() {
+  val instrumentation=InstrumentationRegistry.getInstrumentation()
+  TimerRepository(context).reset(30)
+  ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+   fun tap(tag:String) {
+    val r=Rect()
+    scenario.onActivity { a ->
+     val v=a.findViewById<ViewGroup>(android.R.id.content).findViewWithTag<View>(tag)
+     v.requestRectangleOnScreen(Rect(0,0,v.width,v.height),true)
+    }
+    instrumentation.waitForIdleSync()
+    scenario.onActivity { a ->
+     val v=a.findViewById<ViewGroup>(android.R.id.content).findViewWithTag<View>(tag)
+     assertTrue(v.getGlobalVisibleRect(r)); assertEquals(v.height,r.height())
+    }
+    val now=android.os.SystemClock.uptimeMillis()
+    listOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP).forEach { action ->
+     val event=android.view.MotionEvent.obtain(now,now+20,action,r.exactCenterX(),r.exactCenterY(),0)
+     instrumentation.sendPointerSync(event); event.recycle()
+    }
+    instrumentation.waitForIdleSync()
+   }
+   listOf(false,true).forEach { paused ->
+    if(paused) { TimerRepository(context).start(30); TimerRepository(context).pause(); scenario.recreate() }
+    tap("preset_60")
+    scenario.onActivity { a -> assertTrue(a.findViewById<ViewGroup>(android.R.id.content).findViewWithTag<View>("preset_60").isSelected) }
+    tap("duration_custom")
+    scenario.onActivity {
+     val roots=android.view.inspector.WindowInspector.getGlobalWindowViews()
+     assertTrue(roots.any { it.findViewWithTag<View>("duration_input")!=null })
+     roots.last { it.findViewById<View>(android.R.id.button2)!=null }.findViewById<View>(android.R.id.button2).performClick()
+     assertEquals(if(paused) Phase.PAUSED else Phase.IDLE,TimerRepository(context).read().phase)
+    }
+   }
+  }
+ }
 }

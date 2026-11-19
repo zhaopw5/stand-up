@@ -130,12 +130,14 @@ class PlaylistIntegrationTest {
     val r=Rect()
     scenario.onActivity { a ->
      val v=a.findViewById<ViewGroup>(android.R.id.content).findViewWithTag<View>(tag)
-     v.requestRectangleOnScreen(Rect(0,0,v.width,v.height),true)
+     val scroll=a.findViewById<ViewGroup>(android.R.id.content).getChildAt(0) as android.widget.ScrollView
+     val target=Rect(0,0,v.width,v.height); scroll.offsetDescendantRectToMyCoords(v,target)
+     scroll.scrollTo(0,target.centerY()-scroll.height/2)
     }
     instrumentation.waitForIdleSync()
     scenario.onActivity { a ->
      val v=a.findViewById<ViewGroup>(android.R.id.content).findViewWithTag<View>(tag)
-     assertTrue(v.getGlobalVisibleRect(r)); assertEquals(v.height,r.height())
+     assertTrue(v.getGlobalVisibleRect(r)); assertEquals("Full visible target $tag",v.height,r.height())
     }
     val now=android.os.SystemClock.uptimeMillis()
     listOf(android.view.MotionEvent.ACTION_DOWN,android.view.MotionEvent.ACTION_UP).forEach { action ->
@@ -159,3 +161,4 @@ class PlaylistIntegrationTest {
   }
  }
 }
+

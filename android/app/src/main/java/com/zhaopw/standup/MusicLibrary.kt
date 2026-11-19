@@ -16,19 +16,34 @@ data class Track(val uri: String, val title: String) {
 class MusicLibrary(private val context: Context) {
     private val prefs = context.getSharedPreferences("music", Context.MODE_PRIVATE)
     private val builtIn = Track("android.resource://${context.packageName}/raw/quiet_steps_loop", "慢步 · 内置音乐")
-    fun tracks(): List<Track> = buildList {
-        add(builtIn)
+    fun tracks(): List<Track> {
         val array = runCatching { JSONArray(prefs.getString("tracks", "[]")) }.getOrDefault(JSONArray())
-        for (index in 0 until array.length()) runCatching {
-            val item = array.getJSONObject(index)
-            add(Track(item.getString("uri"), item.getString("title")))
+        val stored = buildList {
+            for (index in 0 until array.length()) runCatching {
+                val item = array.getJSONObject(index)
+                val uri = item.getString("uri").let { if (it.startsWith("android.resource://")) builtIn.uri else it }
+                add(Track(uri, item.getString("title")))
+            }
         }
-    }.distinctBy { it.uri }
-    private fun save(tracks: List<Track>, replacements: Map<String, String> = pendingReplacements()) {
+        val tracks = (if (prefs.getInt("playlistSchema", 0) < 1) listOf(builtIn) + stored else stored).distinctBy { it.uri }
+        if (prefs.getInt("playlistSchema", 0) < 1) writeTracks(tracks).commit()
+        return tracks
+    }
+    private fun writeTracks(tracks: List<Track>): android.content.SharedPreferences.Editor {
         val array = JSONArray()
-        tracks.filter { it.uri != builtIn.uri }.forEach { array.put(JSONObject().put("uri", it.uri).put("title", it.title)) }
-        prefs.edit().putString("tracks", array.toString()).putBoolean("sessionSyncPending", true)
+        tracks.forEach { array.put(JSONObject().put("uri", it.uri).put("title", it.title)) }
+        return prefs.edit().putString("tracks", array.toString()).putInt("playlistSchema", 1)
+    }
+    private fun save(tracks: List<Track>, replacements: Map<String, String> = pendingReplacements()) {
+        writeTracks(tracks).putBoolean("sessionSyncPending", true)
             .putString("pendingReplacements", JSONObject(replacements).toString()).commit()
+    }
+    fun hasBuiltIn() = tracks().any { it.uri == builtIn.uri }
+    fun restoreBuiltIn() { if (!hasBuiltIn()) save(tracks() + builtIn) }
+    fun move(uri: String, offset: Int) {
+        val list = tracks().toMutableList(); val from = list.indexOfFirst { it.uri == uri }; val to = from + offset
+        if (from < 0 || to !in list.indices || offset !in listOf(-1, 1)) return
+        list.add(to, list.removeAt(from)); save(list)
     }
     fun import(uri: Uri) {
         val track = readableTrack(uri)
@@ -37,7 +52,7 @@ class MusicLibrary(private val context: Context) {
     }
     fun replace(oldUri: String, uri: Uri) {
         val existing = tracks()
-        require(existing.any { it.uri == oldUri && removable(it) })
+        require(existing.any { it.uri == oldUri && reselectable(it) })
         // Validate and persist the new grant before changing the library or old grant.
         val replacement = readableTrack(uri)
         save(existing.map { if (it.uri == oldUri) replacement else it }.distinctBy { it.uri }, withReplacement(pendingReplacements(), oldUri, replacement.uri))
@@ -62,11 +77,18 @@ class MusicLibrary(private val context: Context) {
         }
     }
     fun remove(track: Track) {
-        if (track.uri == builtIn.uri) return
-        save(tracks().filter { it.uri != track.uri }); error(track.uri, null)
-        runCatching { context.contentResolver.releasePersistableUriPermission(Uri.parse(track.uri), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        val existing = tracks(); val index = existing.indexOfFirst { it.uri == track.uri }
+        if (index < 0) return
+        val selected = selected(); val remaining = existing.filter { it.uri != track.uri }
+        save(remaining); error(track.uri, null)
+        if (selected == track.uri) {
+            prefs.edit().putString("selected", remaining.getOrNull(index.coerceAtMost(remaining.lastIndex))?.uri)
+                .putLong("position", 0).commit()
+        }
+        if (reselectable(track) && remaining.none { it.uri == track.uri })
+            runCatching { context.contentResolver.releasePersistableUriPermission(Uri.parse(track.uri), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
     }
-    fun removable(track: Track) = track.uri != builtIn.uri
+    fun reselectable(track: Track) = track.uri != builtIn.uri
     var mode: Int
         get() = prefs.getInt("mode", 2)
         set(value) { prefs.edit().putInt("mode", value).apply() }
@@ -78,8 +100,12 @@ class MusicLibrary(private val context: Context) {
     fun markSessionSynchronized() {
         prefs.edit().remove("pendingReplacements").putBoolean("sessionSyncPending", false).commit()
     }
-    fun savePosition(uri: String, position: Long) { prefs.edit().putString("selected", uri).putLong("position", position).apply() }
-    fun selected() = replacementTarget(prefs.getString("selected", builtIn.uri), pendingReplacements())?.let { if (it.startsWith("android.resource://")) builtIn.uri else it }
+    fun savePosition(uri: String, position: Long) { if (tracks().none { it.uri == uri }) return; prefs.edit().putString("selected", uri).putLong("position", position).apply() }
+    fun selected(): String? {
+        val resolved = replacementTarget(prefs.getString("selected", builtIn.uri), pendingReplacements())
+            ?.let { if (it.startsWith("android.resource://")) builtIn.uri else it }
+        return tracks().firstOrNull { it.uri == resolved }?.uri ?: tracks().firstOrNull()?.uri
+    }
     fun position() = if (pendingReplacements().containsKey(prefs.getString("selected", builtIn.uri))) 0L else prefs.getLong("position", 0)
     fun error(message: String?) = error(selected(), message)
     fun error() = trackError(selected())

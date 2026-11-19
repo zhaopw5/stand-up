@@ -32,7 +32,7 @@ class MusicService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true).build()
         player.setWakeMode(C.WAKE_MODE_LOCAL)
         val tracks = library.tracks()
-        player.setMediaItems(tracks.map { it.mediaItem() }, tracks.indexOfFirst { it.uri == library.selected() }.coerceAtLeast(0), library.position())
+        if (tracks.isNotEmpty()) player.setMediaItems(tracks.map { it.mediaItem() }, tracks.indexOfFirst { it.uri == library.selected() }.coerceAtLeast(0), library.position())
         player.repeatMode = library.mode
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) { if (!isPlaying) savePosition() else library.error(player.currentMediaItem?.mediaId, null) }

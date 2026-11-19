@@ -93,7 +93,7 @@ class MainActivity:Activity() {
  }
  private fun ready()=Notifications(this).remindersAllowed() && AlarmScheduler(this).exactAllowed()
  private fun showPermissions() { permissions?.dismiss(); permissions=PermissionPage(this); permissions?.show() }
- private fun showMusic() { sheet?.dialog?.dismiss(); sheet=MusicSheet(this,library,{controller},::importMusic,::reselectMusic); sheet?.show() }
+ private fun showMusic() { sheet?.dialog?.dismiss(); sheet=MusicSheet(this,library,{controller},::importMusic,::reselectMusic,::update); sheet?.show() }
  private fun importMusic() { prefs.edit().remove("reselectUri").apply(); pickMusic(true) }
  private fun reselectMusic(track:Track) { prefs.edit().putString("reselectUri",track.uri).apply(); pickMusic(false) }
  private fun pickMusic(multiple:Boolean) { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("audio/*").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_ALLOW_MULTIPLE,multiple).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION),41) }
@@ -103,17 +103,20 @@ class MainActivity:Activity() {
   val uris=tracks.map { it.uri }
   val current=(0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }
   if(!library.needsSessionSync() && current==uris) return
+  if(tracks.isEmpty()) { player.pause(); player.clearMediaItems(); library.markSessionSynchronized(); return }
   val plan=planPlaylistSync(uris,player.currentMediaItem?.mediaId,player.currentPosition,player.playWhenReady,library.pendingReplacements())
-  player.setMediaItems(tracks.map { it.mediaItem() },plan.index,plan.position)
+  val index=if(player.currentMediaItem!=null && !uris.contains(replacementTarget(player.currentMediaItem?.mediaId,library.pendingReplacements()))) uris.indexOf(library.selected()).coerceAtLeast(0) else plan.index
+  player.setMediaItems(tracks.map { it.mediaItem() },index,plan.position)
   player.prepare(); player.playWhenReady=plan.playWhenReady
-  library.savePosition(uris[plan.index],plan.position)
+  library.savePosition(uris[index],plan.position)
   library.markSessionSynchronized()
  }
  private fun update() {
   synchronizeMusic()
   var state=repository.read(); if(repository.deliver(state.generation)) state=repository.read()
   screen.render(state,selected,SystemClock.elapsedRealtime(),ready(),repository.rebootNotice())
-  controller?.let { p-> val title=library.trackError(p.currentMediaItem?.mediaId) ?: p.currentMediaItem?.mediaMetadata?.title ?: "选择一首音乐"
+  screen.musicPlay.isEnabled=library.tracks().isNotEmpty()
+  controller?.let { p-> val title=library.trackError(p.currentMediaItem?.mediaId) ?: p.currentMediaItem?.mediaMetadata?.title ?: if(library.tracks().isEmpty()) "播放列表为空，点此添加音乐" else "选择一首音乐"
    if(screen.musicTitle.text.toString()!=title.toString()) screen.musicTitle.text=title
    screen.musicPlay.setImageResource(if(p.isPlaying) R.drawable.ic_pause else R.drawable.ic_play); screen.musicPlay.contentDescription=if(p.isPlaying) "暂停音乐" else "播放音乐" }
   if(sheet?.dialog?.isShowing==true) sheet?.update()

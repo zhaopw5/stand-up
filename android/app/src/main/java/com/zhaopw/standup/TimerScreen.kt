@@ -39,14 +39,14 @@ internal class TimerScreen(private val ui:Ui,settings:()->Unit,primary:()->Unit,
   timer.addView(status); timer.addView(countdown); countdown.setAutoSizeTextTypeUniformWithConfiguration((48/ui.context.resources.configuration.fontScale).toInt().coerceAtMost(48),60,2,android.util.TypedValue.COMPLEX_UNIT_SP); timer.addView(roundTotal); timer.addView(timerProgress,LinearLayout.LayoutParams(-1,ui.dp(4)).apply { topMargin=ui.dp(12); bottomMargin=ui.dp(12) }); timer.addView(detail); timer.addView(pausedRemaining); timer.addView(nextDuration)
   val groups=if(ui.context.resources.configuration.fontScale>1.2f || ui.context.resources.configuration.screenWidthDp<360) listOf(listOf(15,30),listOf(45,60)) else listOf(listOf(15,30,45,60))
   groups.forEach { group-> durations.addView(ui.row().apply { group.forEach { n -> ui.equal(this,ui.button("$n 分",false,"preset_$n") { select(n) }.also { presetButtons[n]=it }) } }) }
-  durations.addView(ui.button("自定义时长",false,"duration_custom",custom),LinearLayout.LayoutParams(-1,-2))
+  durations.addView(ui.button("自定义时长",false,"duration_custom",custom),LinearLayout.LayoutParams(-1,-2).apply { topMargin=ui.dp(10) })
   timer.addView(durations,LinearLayout.LayoutParams(-1,-2).apply { topMargin=ui.dp(12); bottomMargin=ui.dp(12) })
   timer.addView(primaryButton,LinearLayout.LayoutParams(-1,-2).apply { topMargin=ui.dp(14) })
   if(ui.context.resources.configuration.fontScale>1.2f) { secondary.orientation=LinearLayout.VERTICAL; secondary.addView(endButton,LinearLayout.LayoutParams(-1,-2)); secondary.addView(adjustButton,LinearLayout.LayoutParams(-1,-2)) } else { ui.equal(secondary,endButton); ui.equal(secondary,adjustButton) }; timer.addView(secondary)
   content.addView(timer)
-  musicHeading=ui.row().apply { addView(ui.text("背景音乐",15f,Palette.ink),LinearLayout.LayoutParams(0,-2,1f)); addView(ui.button("音乐库",false,"music_library",music)) }; content.addView(musicHeading)
+  musicHeading=ui.column().apply { addView(ui.button("背景音乐播放列表  ›",false,"music_library",music).apply { contentDescription="背景音乐播放列表" },LinearLayout.LayoutParams(-1,-2)) }; content.addView(musicHeading)
   musicCard.addView(ui.row().apply {
-   addView(ui.icon(R.drawable.ic_music,"打开音乐库","music_art",music))
+   addView(ui.icon(R.drawable.ic_music,"打开背景音乐播放列表","music_art",music))
    addView(ui.column().apply { setPadding(ui.dp(12),0,ui.dp(6),0); addView(musicTitle); addView(ui.text("为专注留一点背景声",12f)) },LinearLayout.LayoutParams(0,-2,1f))
    addView(musicPlay)
   }); content.addView(musicCard)

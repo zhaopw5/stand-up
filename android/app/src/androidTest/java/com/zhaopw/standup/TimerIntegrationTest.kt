@@ -288,14 +288,14 @@ class TimerIntegrationTest {
         val prefs=context.getSharedPreferences("music",Context.MODE_PRIVATE)
         val original=prefs.getString("tracks","[]")
         val missing="content://com.zhaopw.missing/audio"
-        prefs.edit().putString("tracks","[{\"uri\":\"$missing\",\"title\":\"Lost audio\"}]").commit()
+        prefs.edit().remove("playlistSchema").putString("tracks","[{\"uri\":\"$missing\",\"title\":\"Lost audio\"}]").commit()
         try {
             val library=MusicLibrary(context); val before=library.tracks()
             assertThrows(Exception::class.java) { library.import(android.net.Uri.parse(missing)) }
             assertEquals(before,library.tracks())
             assertThrows(Exception::class.java) { library.replace(missing,android.net.Uri.parse("content://com.zhaopw.missing/replacement")) }
             assertEquals(before,library.tracks())
-        } finally { prefs.edit().putString("tracks",original).commit() }
+        } finally { prefs.edit().remove("playlistSchema").putString("tracks",original).commit() }
     }
     @Test fun cancelledReselectSurvivesRecreationWithoutMutatingTimerOrLibrary() {
         prepareUi()
@@ -337,7 +337,7 @@ class TimerIntegrationTest {
             }
             assertTrue(ready.await(20,TimeUnit.SECONDS))
             // This is the persisted successful-picker boundary, before the Activity/controller exists.
-            context.getSharedPreferences("music",Context.MODE_PRIVATE).edit().putString("tracks","[]")
+            context.getSharedPreferences("music",Context.MODE_PRIVATE).edit().remove("playlistSchema").putString("tracks","[]")
                 .putString("pendingReplacements",org.json.JSONObject().put(old,target).toString())
                 .putBoolean("sessionSyncPending",true).putString("selected",old).putLong("position",9000).commit()
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
@@ -359,7 +359,7 @@ class TimerIntegrationTest {
         val prefs=context.getSharedPreferences("music",Context.MODE_PRIVATE)
         val original=prefs.getString("tracks","[]")
         try {
-            prefs.edit().putString("tracks","[{\"uri\":\"content://missing/other\",\"title\":\"Other\"}]")
+            prefs.edit().remove("playlistSchema").putString("tracks","[{\"uri\":\"content://missing/other\",\"title\":\"Other\"}]")
                 .putString("pendingReplacements","{\"old\":\"middle\",\"middle\":\"new\"}").putBoolean("sessionSyncPending",true).commit()
             val library=MusicLibrary(context)
             library.remove(library.tracks().last())
@@ -368,7 +368,7 @@ class TimerIntegrationTest {
             library.markSessionSynchronized()
             assertFalse(MusicLibrary(context).needsSessionSync())
             assertTrue(MusicLibrary(context).pendingReplacements().isEmpty())
-        } finally { prefs.edit().putString("tracks",original).remove("pendingReplacements").putBoolean("sessionSyncPending",false).commit() }
+        } finally { prefs.edit().remove("playlistSchema").putString("tracks",original).remove("pendingReplacements").putBoolean("sessionSyncPending",false).commit() }
     }
     @Test fun visibleMusicModesControlSessionAndSurviveRecreation() {
         if(Build.VERSION.SDK_INT<29) return

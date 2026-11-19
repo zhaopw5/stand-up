@@ -17,8 +17,8 @@ internal fun planPlaylistSync(
     replacements: Map<String, String>,
 ): PlaylistSyncPlan {
     val index = uris.indexOf(replacementTarget(selected, replacements))
-    return PlaylistSyncPlan(index.coerceAtLeast(0),
-        if (index < 0 || replacements.containsKey(selected)) 0 else position, playWhenReady)
+    return PlaylistSyncPlan(if (uris.isEmpty()) -1 else index.coerceAtLeast(0),
+        if (index < 0 || replacements.containsKey(selected)) 0 else position, playWhenReady && index >= 0)
 }
 
 /** Collapse ancestors so choosing an earlier file again cannot form A → B → A. */

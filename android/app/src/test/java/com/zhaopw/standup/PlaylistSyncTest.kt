@@ -35,4 +35,12 @@ class PlaylistSyncTest {
         assertEquals("old",replacementTarget("middle",replacements))
         assertEquals("old",replacementTarget("old",replacements))
     }
+    @Test fun emptyPlaylistHasNoSelectionAndCannotAutoplay() {
+        val plan=planPlaylistSync(emptyList(),"removed",9000,true,emptyMap())
+        assertEquals(-1,plan.index); assertEquals(0L,plan.position); assertFalse(plan.playWhenReady)
+    }
+    @Test fun deletingPlayingTrackDoesNotAutoplayAnother() {
+        val plan=planPlaylistSync(listOf("next"),"removed",9000,true,emptyMap())
+        assertEquals(0,plan.index); assertEquals(0L,plan.position); assertFalse(plan.playWhenReady)
+    }
 }

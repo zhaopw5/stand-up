@@ -25,6 +25,7 @@ internal class Ui(val context: Context) {
  fun shape(color:Int,radius:Int=22)=GradientDrawable().apply { setColor(color); cornerRadius=dp(radius).toFloat() }
  fun card()=column().apply { setPadding(dp(20),dp(18),dp(20),dp(18)); background=shape(Palette.surface).apply { setStroke(dp(1),Palette.line) }; layoutParams=LinearLayout.LayoutParams(-1,-2).apply { bottomMargin=dp(16) } }
  fun button(value:String,primary:Boolean=false,tagValue:String?=null,action:()->Unit)=Button(context).apply {
+  if(!primary) { stateListAnimator=null; elevation=0f; translationZ=0f }
   text=value; textSize=14f; isAllCaps=false; typeface=Typeface.create("sans-serif-medium",Typeface.NORMAL)
   minHeight=dp(48); minimumHeight=dp(48); minimumWidth=dp(48); setPadding(dp(12),dp(4),dp(12),dp(4))
   background=android.graphics.drawable.RippleDrawable(ColorStateList.valueOf(0x222D672F),shape(if(primary) Palette.dark else Color.TRANSPARENT,14),null)

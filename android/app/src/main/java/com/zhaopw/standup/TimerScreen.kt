@@ -56,7 +56,10 @@ internal class TimerScreen(private val ui:Ui,settings:()->Unit,primary:()->Unit,
   val key=listOf(state.phase,state.duration,selected,formatRemaining(model.remaining),ready,rebooted)
   if(lastRender==key) return
   lastRender=key
-  status.text=model.title; countdown.text=formatRemaining(model.remaining); countdown.contentDescription="剩余时间 ${countdown.text}"
+  if(status.text.toString()!=model.title) {
+   status.text=model.title; status.textSize=if(due) 22f else 14f
+   status.typeface=if(due) Typeface.create("sans-serif-medium",Typeface.NORMAL) else Typeface.DEFAULT
+  }; countdown.text=formatRemaining(model.remaining); countdown.contentDescription="剩余时间 ${countdown.text}"
   primaryButton.text=model.primary; countdown.visibility=if(due) View.GONE else View.VISIBLE; breakIcon.visibility=if(due) View.VISIBLE else View.GONE
   detail.text=when(state.phase) { Phase.DUE->"离开屏幕一会儿，站起来走几步。\n让眼睛和身体都放松一下。\n\n背景音乐已暂停"; Phase.PAUSED->"继续会保留剩余时间 · 所选时长用于下一轮"; else->"到时提醒你离开屏幕，活动一下。" }
   durations.visibility=if(model.showDurations) View.VISIBLE else View.GONE

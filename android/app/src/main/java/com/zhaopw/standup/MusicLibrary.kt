@@ -24,10 +24,11 @@ class MusicLibrary(private val context: Context) {
             add(Track(item.getString("uri"), item.getString("title")))
         }
     }.distinctBy { it.uri }
-    private fun save(tracks: List<Track>) {
+    private fun save(tracks: List<Track>, replacements: Map<String, String> = pendingReplacements()) {
         val array = JSONArray()
         tracks.filter { it.uri != builtIn.uri }.forEach { array.put(JSONObject().put("uri", it.uri).put("title", it.title)) }
-        prefs.edit().putString("tracks", array.toString()).commit()
+        prefs.edit().putString("tracks", array.toString()).putBoolean("sessionSyncPending", true)
+            .putString("pendingReplacements", JSONObject(replacements).toString()).commit()
     }
     fun import(uri: Uri) {
         val track = readableTrack(uri)
@@ -39,7 +40,7 @@ class MusicLibrary(private val context: Context) {
         require(existing.any { it.uri == oldUri && removable(it) })
         // Validate and persist the new grant before changing the library or old grant.
         val replacement = readableTrack(uri)
-        save(existing.map { if (it.uri == oldUri) replacement else it }.distinctBy { it.uri })
+        save(existing.map { if (it.uri == oldUri) replacement else it }.distinctBy { it.uri }, withReplacement(pendingReplacements(), oldUri, replacement.uri))
         if (oldUri != replacement.uri) {
             error(oldUri, null)
             runCatching { context.contentResolver.releasePersistableUriPermission(Uri.parse(oldUri), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
@@ -69,9 +70,17 @@ class MusicLibrary(private val context: Context) {
     var mode: Int
         get() = prefs.getInt("mode", 2)
         set(value) { prefs.edit().putInt("mode", value).apply() }
+    fun pendingReplacements(): Map<String, String> {
+        val json = runCatching { JSONObject(prefs.getString("pendingReplacements", "{}")!!) }.getOrDefault(JSONObject())
+        return buildMap { val keys = json.keys(); while (keys.hasNext()) { val key = keys.next(); put(key, json.getString(key)) } }
+    }
+    fun needsSessionSync() = prefs.getBoolean("sessionSyncPending", false)
+    fun markSessionSynchronized() {
+        prefs.edit().remove("pendingReplacements").putBoolean("sessionSyncPending", false).commit()
+    }
     fun savePosition(uri: String, position: Long) { prefs.edit().putString("selected", uri).putLong("position", position).apply() }
-    fun selected() = prefs.getString("selected", builtIn.uri)?.let { if (it.startsWith("android.resource://")) builtIn.uri else it }
-    fun position() = prefs.getLong("position", 0)
+    fun selected() = replacementTarget(prefs.getString("selected", builtIn.uri), pendingReplacements())?.let { if (it.startsWith("android.resource://")) builtIn.uri else it }
+    fun position() = if (pendingReplacements().containsKey(prefs.getString("selected", builtIn.uri))) 0L else prefs.getLong("position", 0)
     fun error(message: String?) = error(selected(), message)
     fun error() = trackError(selected())
     fun error(uri: String?, message: String?) { if (uri != null) prefs.edit().putString("error:$uri", message).apply() }

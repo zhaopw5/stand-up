@@ -40,7 +40,7 @@ class MainActivity:Activity() {
   screen=TimerScreen(ui,::showPermissions,::primary,::secondary,::adjust,::select,::custom,::showMusic,{ toggleMusic(controller); update() },{ repository.clearRebootNotice(); update() })
   val scroll=ScrollView(this).apply { isFillViewport=true; setBackgroundColor(Palette.bg); addView(screen.content) }; ui.insets(scroll); setContentView(scroll); bars()
   future=MediaController.Builder(this,SessionToken(this,ComponentName(this,MusicService::class.java))).buildAsync().also { f->f.addListener({
-   if(!isDestroyed) runCatching { f.get() }.onSuccess { controller=it; update() }.onFailure { screen.musicTitle.text="播放器连接失败，重新打开应用重试" }
+   if(!isDestroyed) runCatching { f.get() }.onSuccess { controller=it; synchronizeMusic(); update() }.onFailure { screen.musicTitle.text="播放器连接失败，重新打开应用重试" }
   },ContextCompat.getMainExecutor(this)) }
   update()
  }
@@ -97,7 +97,20 @@ class MainActivity:Activity() {
  private fun importMusic() { prefs.edit().remove("reselectUri").apply(); pickMusic(true) }
  private fun reselectMusic(track:Track) { prefs.edit().putString("reselectUri",track.uri).apply(); pickMusic(false) }
  private fun pickMusic(multiple:Boolean) { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("audio/*").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_ALLOW_MULTIPLE,multiple).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION),41) }
+ private fun synchronizeMusic() {
+  val player=controller ?: return
+  val tracks=library.tracks()
+  val uris=tracks.map { it.uri }
+  val current=(0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId }
+  if(!library.needsSessionSync() && current==uris) return
+  val plan=planPlaylistSync(uris,player.currentMediaItem?.mediaId,player.currentPosition,player.playWhenReady,library.pendingReplacements())
+  player.setMediaItems(tracks.map { it.mediaItem() },plan.index,plan.position)
+  player.prepare(); player.playWhenReady=plan.playWhenReady
+  library.savePosition(uris[plan.index],plan.position)
+  library.markSessionSynchronized()
+ }
  private fun update() {
+  synchronizeMusic()
   var state=repository.read(); if(repository.deliver(state.generation)) state=repository.read()
   screen.render(state,selected,SystemClock.elapsedRealtime(),ready(),repository.rebootNotice())
   controller?.let { p-> val title=library.trackError(p.currentMediaItem?.mediaId) ?: p.currentMediaItem?.mediaMetadata?.title ?: "选择一首音乐"
@@ -111,16 +124,12 @@ class MainActivity:Activity() {
   val replacing=prefs.getString("reselectUri",null); prefs.edit().remove("reselectUri").apply()
   if(resultCode!=RESULT_OK || data==null) return
   val uris=data.clipData?.let { c->(0 until c.itemCount).map { c.getItemAt(it).uri } } ?: listOfNotNull(data.data)
-  val errors=mutableListOf<String>(); var imported=false; var replacementUri:String?=null
+  val errors=mutableListOf<String>(); var imported=false
   (if(replacing!=null) uris.take(1) else uris.distinct()).forEach { uri->runCatching {
-   if(replacing!=null) { library.replace(replacing,uri); replacementUri=uri.toString() } else library.import(uri)
+   if(replacing!=null) { library.replace(replacing,uri) } else library.import(uri)
    imported=true
   }.onFailure { errors.add("无法读取音频或保留访问权限，请重新选择文件。") } }
-  if(imported) controller?.let { p->val selected=p.currentMediaItem?.mediaId; val replacesCurrent=replacing!=null && selected==replacing
-   val position=if(replacesCurrent) 0L else p.currentPosition; val playing=p.playWhenReady; val tracks=library.tracks()
-   val target=if(replacesCurrent) replacementUri else selected
-   p.setMediaItems(tracks.map { it.mediaItem() },tracks.indexOfFirst { it.uri==target }.coerceAtLeast(0),position); p.prepare(); p.playWhenReady=playing
-  }
+  if(imported) synchronizeMusic()
   sheet?.update(); update(); if(errors.isNotEmpty()) AlertDialog.Builder(this).setMessage(errors.joinToString("\n")).setPositiveButton("知道了",null).show()
  }
 }

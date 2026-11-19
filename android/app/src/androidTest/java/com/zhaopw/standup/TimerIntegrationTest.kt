@@ -313,4 +313,59 @@ class TimerIntegrationTest {
             assertEquals(deadline,repo.read().deadline)
         }
     }
+    @Test fun deferredReplacementIsAppliedWhenActivityConnectsToExistingSession() {
+        prepareUi()
+        val instrumentation=InstrumentationRegistry.getInstrumentation()
+        val library=MusicLibrary(context)
+        val target=library.tracks().first().uri
+        val old="legacy-track-before-reselection"
+        val future=MediaController.Builder(context,SessionToken(context,ComponentName(context,MusicService::class.java))).buildAsync()
+        val player=future.get(20,TimeUnit.SECONDS)
+        val ready=CountDownLatch(1)
+        val replaced=CountDownLatch(1)
+        try {
+            instrumentation.runOnMainSync {
+                player.addListener(object:Player.Listener {
+                    override fun onPlaybackStateChanged(state:Int) { if(state==Player.STATE_READY) ready.countDown() }
+                    override fun onMediaItemTransition(item:androidx.media3.common.MediaItem?,reason:Int) { if(item?.mediaId==target) replaced.countDown() }
+                })
+                player.pause()
+                player.setMediaItems(listOf(androidx.media3.common.MediaItem.Builder().setMediaId(old).setUri(target).build()),0,9000)
+                player.prepare()
+            }
+            assertTrue(ready.await(20,TimeUnit.SECONDS))
+            // This is the persisted successful-picker boundary, before the Activity/controller exists.
+            context.getSharedPreferences("music",Context.MODE_PRIVATE).edit().putString("tracks","[]")
+                .putString("pendingReplacements",org.json.JSONObject().put(old,target).toString())
+                .putBoolean("sessionSyncPending",true).putString("selected",old).putLong("position",9000).commit()
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                assertTrue("Connecting Activity must apply the deferred replacement",replaced.await(10,TimeUnit.SECONDS))
+                instrumentation.waitForIdleSync()
+                instrumentation.runOnMainSync {
+                    assertEquals(target,player.currentMediaItem?.mediaId)
+                    assertEquals(0L,player.currentPosition)
+                    assertFalse(player.playWhenReady)
+                }
+                assertFalse(library.needsSessionSync())
+                assertTrue(library.pendingReplacements().isEmpty())
+                scenario.recreate()
+                instrumentation.runOnMainSync { assertEquals(target,player.currentMediaItem?.mediaId); assertFalse(player.playWhenReady) }
+            }
+        } finally { instrumentation.runOnMainSync { player.release() } }
+    }
+    @Test fun pendingReplacementMapSurvivesAdditionalLibraryMutationAndRecreation() {
+        val prefs=context.getSharedPreferences("music",Context.MODE_PRIVATE)
+        val original=prefs.getString("tracks","[]")
+        try {
+            prefs.edit().putString("tracks","[{\"uri\":\"content://missing/other\",\"title\":\"Other\"}]")
+                .putString("pendingReplacements","{\"old\":\"middle\",\"middle\":\"new\"}").putBoolean("sessionSyncPending",true).commit()
+            val library=MusicLibrary(context)
+            library.remove(library.tracks().last())
+            assertEquals(mapOf("old" to "middle","middle" to "new"),MusicLibrary(context).pendingReplacements())
+            assertTrue(MusicLibrary(context).needsSessionSync())
+            library.markSessionSynchronized()
+            assertFalse(MusicLibrary(context).needsSessionSync())
+            assertTrue(MusicLibrary(context).pendingReplacements().isEmpty())
+        } finally { prefs.edit().putString("tracks",original).remove("pendingReplacements").putBoolean("sessionSyncPending",false).commit() }
+    }
 }

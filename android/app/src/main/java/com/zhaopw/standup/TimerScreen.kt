@@ -6,6 +6,8 @@ import android.view.View
 import android.widget.*
 
 internal class TimerScreen(private val ui:Ui,settings:()->Unit,primary:()->Unit,end:()->Unit,adjust:()->Unit,select:(Int)->Unit,custom:()->Unit,music:()->Unit,toggle:()->Unit,dismissBoot:()->Unit) {
+ private var lastRender:List<Any>?=null
+ private var lastSelection:Int?=null
  val content=ui.column().apply { setPadding(ui.dp(24),ui.dp(18),ui.dp(24),ui.dp(24)) }
  private val timer=ui.card()
  private val status=ui.text("",14f,Palette.brand).apply { gravity=Gravity.CENTER }
@@ -51,6 +53,9 @@ internal class TimerScreen(private val ui:Ui,settings:()->Unit,primary:()->Unit,
  }
  fun render(state:TimerState,selected:Int,now:Long,ready:Boolean,rebooted:Boolean) {
   val model=TimerUiState.from(state,selected,now); val due=state.phase==Phase.DUE
+  val key=listOf(state.phase,state.duration,selected,formatRemaining(model.remaining),ready,rebooted)
+  if(lastRender==key) return
+  lastRender=key
   status.text=model.title; countdown.text=formatRemaining(model.remaining); countdown.contentDescription="剩余时间 ${countdown.text}"
   primaryButton.text=model.primary; countdown.visibility=if(due) View.GONE else View.VISIBLE; breakIcon.visibility=if(due) View.VISIBLE else View.GONE
   detail.text=when(state.phase) { Phase.DUE->"离开屏幕一会儿，站起来走几步。\n让眼睛和身体都放松一下。\n\n背景音乐已暂停"; Phase.PAUSED->"继续会保留剩余时间 · 所选时长用于下一轮"; else->"到时提醒你离开屏幕，活动一下。" }
@@ -58,7 +63,10 @@ internal class TimerScreen(private val ui:Ui,settings:()->Unit,primary:()->Unit,
   secondary.visibility=if(state.phase==Phase.RUNNING || state.phase==Phase.PAUSED) View.VISIBLE else View.GONE
   endButton.text=if(state.phase==Phase.PAUSED) "重新开始" else "结束本轮"
   adjustButton.text=if(state.phase==Phase.PAUSED) "下次时长" else "调整时长"
-  presetButtons.forEach { (n,b) -> b.background=ui.shape(if(n==selected) Palette.soft else android.graphics.Color.TRANSPARENT,12); b.isSelected=n==selected }
+  if(lastSelection!=selected) {
+   presetButtons.forEach { (n,b) -> b.background=ui.shape(if(n==selected) Palette.soft else android.graphics.Color.TRANSPARENT,12); b.isSelected=n==selected }
+   lastSelection=selected
+  }
   permissionBanner.visibility=if(ready || due) View.GONE else View.VISIBLE
   reboot.visibility=if(rebooted) View.VISIBLE else View.GONE
   musicCard.visibility=if(due) View.GONE else View.VISIBLE; musicHeading.visibility=musicCard.visibility
@@ -67,6 +75,3 @@ internal class TimerScreen(private val ui:Ui,settings:()->Unit,primary:()->Unit,
   timerProgress.progress=((1.0-model.remaining.toDouble()/state.duration)*1000).toInt().coerceIn(0,1000)
  }
 }
-
-
-

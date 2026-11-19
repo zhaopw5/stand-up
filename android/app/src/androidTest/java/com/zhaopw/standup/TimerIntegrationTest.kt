@@ -116,11 +116,13 @@ class TimerIntegrationTest {
         }
     }
     @Test fun keyboardCanSeekAndAccessibleCountdownContainsRemainingTime() {
+        if (Build.VERSION.SDK_INT < 29) return
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             val future = MediaController.Builder(context, SessionToken(context, ComponentName(context, MusicService::class.java))).buildAsync()
             val player = future.get(20, TimeUnit.SECONDS)
             try {
+                lateinit var seekControl: SeekBar
                 val ready = CountDownLatch(1)
                 instrumentation.runOnMainSync {
                     player.pause()
@@ -139,15 +141,25 @@ class TimerIntegrationTest {
                     val views = descendants(activity.findViewById(android.R.id.content))
                     val countdown = views.filterIsInstance<TextView>().first { it.contentDescription?.startsWith("剩余时间 ") == true }
                     assertEquals("剩余时间 ${countdown.text}", countdown.contentDescription.toString())
-                                        activity.findViewById<ViewGroup>(android.R.id.content).findViewWithTag<View>("music_library").performClick()
+                    activity.findViewById<ViewGroup>(android.R.id.content).findViewWithTag<View>("music_library").performClick()
                     val seek = android.view.inspector.WindowInspector.getGlobalWindowViews().flatMap { descendants(it) }.filterIsInstance<SeekBar>().single()
+                    seekControl = seek
                     assertTrue(seek.isEnabled)
-                    seek.requestFocus()
-                    seek.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))
-                    seek.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT))
+
                 }
-                SystemClock.sleep(300)
-                instrumentation.runOnMainSync { assertTrue("Keyboard progress must seek the actual session", player.currentPosition > 0) }
+                instrumentation.waitForIdleSync()
+                scenario.onActivity {
+                    seekControl.requestFocus()
+                    seekControl.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT))
+                    seekControl.dispatchKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DPAD_RIGHT))
+                    assertTrue("Native keyboard must advance range",seekControl.progress>0)
+                }
+                instrumentation.waitForIdleSync()
+                SystemClock.sleep(1000)
+                instrumentation.runOnMainSync {
+                    assertTrue("Keyboard progress must seek the actual session", player.currentPosition > 0)
+                    assertTrue("Seek touch target must be at least 48dp", seekControl.height >= (48 * context.resources.displayMetrics.density).toInt())
+                }
             } finally { instrumentation.runOnMainSync { player.release() } }
         }
     }
@@ -203,44 +215,57 @@ class TimerIntegrationTest {
             assertFalse(TimerRepository(context).rebootNotice())
         }
     }
-    private fun dialogRoot(): View = android.view.inspector.WindowInspector.getGlobalWindowViews().last()
+    private fun dialogRoot(): View = android.view.inspector.WindowInspector.getGlobalWindowViews().last { it.findViewById<View>(android.R.id.button1) != null }
+    private fun step(scenario: ActivityScenario<MainActivity>, action: (MainActivity) -> Unit) {
+        scenario.onActivity(action)
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+    }
     @Test fun cancellingEndAndAdjustKeepsDeadlineAndExpiredConfirmationCannotResetDue() {
         if(Build.VERSION.SDK_INT<29) return
         prepareUi()
         val repo=TimerRepository(context); val run=repo.start(30)
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { a ->
-                control(a,"timer_end").performClick()
-                dialogRoot().findViewById<View>(android.R.id.button2).performClick()
-                assertEquals(run.deadline,repo.read().deadline)
-                control(a,"timer_adjust").performClick()
+            step(scenario) { control(it,"timer_end").performClick() }
+            step(scenario) { dialogRoot().findViewById<View>(android.R.id.button2).performClick() }
+            assertEquals(run.deadline,repo.read().deadline)
+            step(scenario) { control(it,"timer_adjust").performClick() }
+            step(scenario) {
                 dialogRoot().findViewWithTag<android.widget.EditText>("duration_input").setText("60")
                 dialogRoot().findViewById<View>(android.R.id.button1).performClick()
-                dialogRoot().findViewById<View>(android.R.id.button2).performClick()
-                assertEquals(run.deadline,repo.read().deadline)
-                assertEquals(30,context.getSharedPreferences("ui",Context.MODE_PRIVATE).getInt("selectedMinutes",30))
-                control(a,"timer_end").performClick()
+            }
+            step(scenario) { dialogRoot().findViewById<View>(android.R.id.button2).performClick() }
+            assertEquals(run.deadline,repo.read().deadline)
+            assertEquals(30,context.getSharedPreferences("ui",Context.MODE_PRIVATE).getInt("selectedMinutes",30))
+            step(scenario) { control(it,"timer_end").performClick() }
+            step(scenario) {
                 context.getSharedPreferences("timer",Context.MODE_PRIVATE).edit().putLong("deadline",SystemClock.elapsedRealtime()-1).commit()
                 dialogRoot().findViewById<View>(android.R.id.button1).performClick()
-                assertEquals(Phase.DUE,repo.read().phase)
             }
+            assertEquals(Phase.DUE,repo.read().phase)
         }
     }
     @Test fun customDurationRejectsOutOfBoundsAndAcceptsBothLimits() {
         if(Build.VERSION.SDK_INT<29) return
         prepareUi()
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            scenario.onActivity { a ->
-                control(a,"duration_custom").performClick()
-                val input=dialogRoot().findViewWithTag<android.widget.EditText>("duration_input")
-                listOf("0","1000").forEach { bad -> input.setText(bad); dialogRoot().findViewById<View>(android.R.id.button1).performClick(); assertNotNull(input.error); assertEquals(Phase.IDLE,TimerRepository(context).read().phase) }
-                input.setText("1"); dialogRoot().findViewById<View>(android.R.id.button1).performClick()
-                assertEquals("01:00",(control(a,"countdown") as TextView).text.toString())
-                control(a,"duration_custom").performClick()
+            step(scenario) { control(it,"duration_custom").performClick() }
+            listOf("0","1000").forEach { bad ->
+                step(scenario) {
+                    val input=dialogRoot().findViewWithTag<android.widget.EditText>("duration_input")
+                    input.setText(bad); dialogRoot().findViewById<View>(android.R.id.button1).performClick()
+                    assertNotNull(input.error); assertEquals(Phase.IDLE,TimerRepository(context).read().phase)
+                }
+            }
+            step(scenario) {
+                dialogRoot().findViewWithTag<android.widget.EditText>("duration_input").setText("1")
+                dialogRoot().findViewById<View>(android.R.id.button1).performClick()
+            }
+            step(scenario) { assertEquals("01:00",(control(it,"countdown") as TextView).text.toString()); control(it,"duration_custom").performClick() }
+            step(scenario) {
                 dialogRoot().findViewWithTag<android.widget.EditText>("duration_input").setText("999")
                 dialogRoot().findViewById<View>(android.R.id.button1).performClick()
-                assertEquals("999:00",(control(a,"countdown") as TextView).text.toString())
             }
+            step(scenario) { assertEquals("999:00",(control(it,"countdown") as TextView).text.toString()) }
         }
     }
     @Test fun firstStartCanSkipPermissionsWithoutChainedPopup() {
@@ -250,13 +275,42 @@ class TimerIntegrationTest {
         Notifications(context).createChannels()
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(Notifications.DUE_CHANNEL,"起身提醒",NotificationManager.IMPORTANCE_NONE))
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            step(scenario) { control(it,"timer_primary").performClick() }
+            assertEquals(Phase.IDLE,TimerRepository(context).read().phase)
+            step(scenario) { dialogRoot().findViewById<View>(android.R.id.button2).performClick() }
+            assertEquals(Phase.RUNNING,TimerRepository(context).read().phase)
+            assertTrue(context.getSharedPreferences("ui",Context.MODE_PRIVATE).getBoolean("firstStartExplained",false))
+        }
+    }
+    @Test fun sameUriRecoveryRevalidatesGrantAndFailurePreservesLibrary() {
+        val prefs=context.getSharedPreferences("music",Context.MODE_PRIVATE)
+        val original=prefs.getString("tracks","[]")
+        val missing="content://com.zhaopw.missing/audio"
+        prefs.edit().putString("tracks","[{\"uri\":\"$missing\",\"title\":\"Lost audio\"}]").commit()
+        try {
+            val library=MusicLibrary(context); val before=library.tracks()
+            assertThrows(Exception::class.java) { library.import(android.net.Uri.parse(missing)) }
+            assertEquals(before,library.tracks())
+            assertThrows(Exception::class.java) { library.replace(missing,android.net.Uri.parse("content://com.zhaopw.missing/replacement")) }
+            assertEquals(before,library.tracks())
+        } finally { prefs.edit().putString("tracks",original).commit() }
+    }
+    @Test fun cancelledReselectSurvivesRecreationWithoutMutatingTimerOrLibrary() {
+        prepareUi()
+        val repo=TimerRepository(context); val deadline=repo.start(30).deadline
+        val before=MusicLibrary(context).tracks()
+        val prefs=context.getSharedPreferences("ui",Context.MODE_PRIVATE)
+        prefs.edit().putString("reselectUri","content://missing/old-track").commit()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.recreate()
+            assertEquals("content://missing/old-track",prefs.getString("reselectUri",null))
             scenario.onActivity { a ->
-                control(a,"timer_primary").performClick()
-                assertEquals(Phase.IDLE,TimerRepository(context).read().phase)
-                dialogRoot().findViewById<View>(android.R.id.button2).performClick()
-                assertEquals(Phase.RUNNING,TimerRepository(context).read().phase)
-                assertTrue(context.getSharedPreferences("ui",Context.MODE_PRIVATE).getBoolean("firstStartExplained",false))
+                MainActivity::class.java.getDeclaredMethod("onActivityResult",Int::class.javaPrimitiveType,Int::class.javaPrimitiveType,android.content.Intent::class.java).apply { isAccessible=true }
+                    .invoke(a,41,android.app.Activity.RESULT_CANCELED,null)
             }
+            assertNull(prefs.getString("reselectUri",null))
+            assertEquals(before,MusicLibrary(context).tracks())
+            assertEquals(deadline,repo.read().deadline)
         }
     }
 }

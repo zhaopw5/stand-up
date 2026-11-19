@@ -93,23 +93,33 @@ class MainActivity:Activity() {
  }
  private fun ready()=Notifications(this).remindersAllowed() && AlarmScheduler(this).exactAllowed()
  private fun showPermissions() { permissions?.dismiss(); permissions=PermissionPage(this); permissions?.show() }
- private fun showMusic() { sheet?.dialog?.dismiss(); sheet=MusicSheet(this,library,{controller},::importMusic); sheet?.show() }
- private fun importMusic() { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("audio/*").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION),41) }
+ private fun showMusic() { sheet?.dialog?.dismiss(); sheet=MusicSheet(this,library,{controller},::importMusic,::reselectMusic); sheet?.show() }
+ private fun importMusic() { prefs.edit().remove("reselectUri").apply(); pickMusic(true) }
+ private fun reselectMusic(track:Track) { prefs.edit().putString("reselectUri",track.uri).apply(); pickMusic(false) }
+ private fun pickMusic(multiple:Boolean) { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("audio/*").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_ALLOW_MULTIPLE,multiple).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION),41) }
  private fun update() {
   var state=repository.read(); if(repository.deliver(state.generation)) state=repository.read()
   screen.render(state,selected,SystemClock.elapsedRealtime(),ready(),repository.rebootNotice())
-  controller?.let { p-> screen.musicTitle.text=library.trackError(p.currentMediaItem?.mediaId) ?: p.currentMediaItem?.mediaMetadata?.title ?: "选择一首音乐"
+  controller?.let { p-> val title=library.trackError(p.currentMediaItem?.mediaId) ?: p.currentMediaItem?.mediaMetadata?.title ?: "选择一首音乐"
+   if(screen.musicTitle.text.toString()!=title.toString()) screen.musicTitle.text=title
    screen.musicPlay.setImageResource(if(p.isPlaying) R.drawable.ic_pause else R.drawable.ic_play); screen.musicPlay.contentDescription=if(p.isPlaying) "暂停音乐" else "播放音乐" }
   if(sheet?.dialog?.isShowing==true) sheet?.update()
  }
  @Deprecated("Native document picker")
  override fun onActivityResult(requestCode:Int,resultCode:Int,data:Intent?) {
-  super.onActivityResult(requestCode,resultCode,data); if(requestCode!=41 || resultCode!=RESULT_OK || data==null) return
+  super.onActivityResult(requestCode,resultCode,data); if(requestCode!=41) return
+  val replacing=prefs.getString("reselectUri",null); prefs.edit().remove("reselectUri").apply()
+  if(resultCode!=RESULT_OK || data==null) return
   val uris=data.clipData?.let { c->(0 until c.itemCount).map { c.getItemAt(it).uri } } ?: listOfNotNull(data.data)
-  val errors=mutableListOf<String>(); var imported=false
-  uris.distinct().forEach { uri->runCatching { library.import(uri); imported=true }.onFailure { errors.add("无法读取音频或保留访问权限，请重新选择文件。") } }
-  if(imported) controller?.let { p->val selected=p.currentMediaItem?.mediaId; val position=p.currentPosition; val playing=p.playWhenReady; val tracks=library.tracks()
-   p.setMediaItems(tracks.map { it.mediaItem() },tracks.indexOfFirst { it.uri==selected }.coerceAtLeast(0),position); p.prepare(); p.playWhenReady=playing
+  val errors=mutableListOf<String>(); var imported=false; var replacementUri:String?=null
+  (if(replacing!=null) uris.take(1) else uris.distinct()).forEach { uri->runCatching {
+   if(replacing!=null) { library.replace(replacing,uri); replacementUri=uri.toString() } else library.import(uri)
+   imported=true
+  }.onFailure { errors.add("无法读取音频或保留访问权限，请重新选择文件。") } }
+  if(imported) controller?.let { p->val selected=p.currentMediaItem?.mediaId; val replacesCurrent=replacing!=null && selected==replacing
+   val position=if(replacesCurrent) 0L else p.currentPosition; val playing=p.playWhenReady; val tracks=library.tracks()
+   val target=if(replacesCurrent) replacementUri else selected
+   p.setMediaItems(tracks.map { it.mediaItem() },tracks.indexOfFirst { it.uri==target }.coerceAtLeast(0),position); p.prepare(); p.playWhenReady=playing
   }
   sheet?.update(); update(); if(errors.isNotEmpty()) AlertDialog.Builder(this).setMessage(errors.joinToString("\n")).setPositiveButton("知道了",null).show()
  }

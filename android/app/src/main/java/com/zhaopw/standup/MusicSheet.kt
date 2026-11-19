@@ -11,7 +11,7 @@ import android.widget.*
 import androidx.media3.common.C
 import androidx.media3.common.Player
 
-internal class MusicSheet(private val context:Context,private val library:MusicLibrary,private val player:()->Player?,private val import:()->Unit) {
+internal class MusicSheet(private val context:Context,private val library:MusicLibrary,private val player:()->Player?,private val import:()->Unit,private val reselect:(Track)->Unit) {
  private val ui=Ui(context)
  val dialog=Dialog(context)
  private val title=ui.text("",18f,Palette.ink)
@@ -26,7 +26,7 @@ internal class MusicSheet(private val context:Context,private val library:MusicL
   container.addView(ui.row().apply { addView(ui.text("背景音乐",22f,Palette.ink),LinearLayout.LayoutParams(0,-2,1f)); addView(ui.icon(R.drawable.ic_close,"收起音乐面板","sheet_close") { dialog.dismiss() }) })
   val body=ui.column(); body.addView(title)
   body.addView(ui.row().apply { ui.equal(this,ui.icon(R.drawable.ic_previous,"上一首","music_previous") { player()?.seekToPreviousMediaItem() }); ui.equal(this,play); ui.equal(this,ui.icon(R.drawable.ic_next,"下一首","music_next") { player()?.seekToNextMediaItem() }) })
-  body.addView(seek); body.addView(progress)
+  body.addView(seek,LinearLayout.LayoutParams(-1,ui.dp(48))); body.addView(progress)
   seek.setOnSeekBarChangeListener(object:SeekBar.OnSeekBarChangeListener {
    override fun onStartTrackingTouch(bar:SeekBar) { dragging=true }
    override fun onStopTrackingTouch(bar:SeekBar) { move(bar.progress); dragging=false }
@@ -69,7 +69,7 @@ internal class MusicSheet(private val context:Context,private val library:MusicL
     card.addView(ui.text(error,13f,Color.rgb(153,62,55)))
     card.addView(ui.row().apply {
      ui.equal(this,ui.button("重试") { player()?.let { p->p.seekTo(library.tracks().indexOfFirst { it.uri==track.uri },0); p.prepare(); p.play() } })
-     if(library.removable(track)) ui.equal(this,ui.button("重新选择",false,null,import))
+     if(library.removable(track)) ui.equal(this,ui.button("重新选择",false,null) { reselect(track) })
     })
    }
    if(library.removable(track)) card.addView(ui.button("移除",false,null) {
@@ -83,5 +83,3 @@ internal class MusicSheet(private val context:Context,private val library:MusicL
  }
 }
 internal fun toggleMusic(player:Player?) { player?.let { if(it.isPlaying) it.pause() else { if(it.playbackState==Player.STATE_ENDED) it.seekTo(0); it.prepare(); it.play() } } }
-
-

@@ -30,17 +30,34 @@ class MusicLibrary(private val context: Context) {
         prefs.edit().putString("tracks", array.toString()).commit()
     }
     fun import(uri: Uri) {
-        if (tracks().any { it.uri == uri.toString() }) return
-        context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val track = readableTrack(uri)
+        val existing = tracks()
+        save(if (existing.any { it.uri == track.uri }) existing.map { if (it.uri == track.uri) track else it } else existing + track)
+    }
+    fun replace(oldUri: String, uri: Uri) {
+        val existing = tracks()
+        require(existing.any { it.uri == oldUri && removable(it) })
+        // Validate and persist the new grant before changing the library or old grant.
+        val replacement = readableTrack(uri)
+        save(existing.map { if (it.uri == oldUri) replacement else it }.distinctBy { it.uri })
+        if (oldUri != replacement.uri) {
+            error(oldUri, null)
+            runCatching { context.contentResolver.releasePersistableUriPermission(Uri.parse(oldUri), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        }
+    }
+    private fun readableTrack(uri: Uri): Track {
+        val resolver = context.contentResolver
+        val hadGrant = resolver.persistedUriPermissions.any { it.uri == uri && it.isReadPermission }
+        resolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         try {
-            context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { } ?: error("无法读取该音频")
-            val title = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
+            resolver.openAssetFileDescriptor(uri, "r")?.use { } ?: throw java.io.IOException("无法读取该音频")
+            val title = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
                 if (it.moveToFirst()) it.getString(0) else null
             } ?: "导入的音频"
-            save(tracks() + Track(uri.toString(), title))
-        } catch (error: Exception) {
-            runCatching { context.contentResolver.releasePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            throw error
+            return Track(uri.toString(), title)
+        } catch (failure: Exception) {
+            if (!hadGrant) runCatching { resolver.releasePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            throw failure
         }
     }
     fun remove(track: Track) {

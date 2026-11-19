@@ -5,6 +5,9 @@ venv/
 build/
 dist/
 artifacts/
+archive/
+# Local assistant notes; keep on this computer rather than commit.
+.workbuddy/
 *.bak
 *-before-*.svg
 *.spec

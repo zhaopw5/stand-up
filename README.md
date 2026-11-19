@@ -1,16 +1,16 @@
 # stand up
 
+提醒你起身活动的小工具，提供 Windows、macOS、Linux 桌面版和安卓试用版。
+
+![应用图标](assets/app-icon.svg)
+
 ## 安卓试用版
 
 从 [Releases](https://github.com/zhaopw5/stand-up/releases) 下载 `stand-up-android.apk`，支持 Android 8.0 及以上。
 包含倒计时、后台音乐、通知栏和锁屏提醒，无浮窗。使用前请允许通知和准确提醒。
 详见 [安卓安装与使用说明](docs/ANDROID.md)，包含 Redmi K70 Pro / Android 16 的锁屏检查方法。
 
-一个提醒你起身活动的桌面倒计时工具，支持背景音乐与迷你浮窗，提供 Windows、Ubuntu Linux 和 macOS 预览包。
-
-![应用图标](assets/app-icon.svg)
-
-## 下载使用
+## Windows 版下载与使用
 
 从本仓库的 **Releases** 下载 `stand-up-windows-x64.zip`，解压后双击 `stand up.exe`。
 适用于 Windows 10/11 64 位，无需安装 Python。当前版本未进行数字签名。
@@ -41,15 +41,15 @@
 
 添加本地 MP3、WAV、OGG 或 M4A 文件，选中后播放，或双击歌曲播放。
 支持顺序播放、单曲循环、列表循环、拖动排序和删除歌曲。
-背景音乐与倒计时、归零提示音独立控制。应用内置一首背景音乐；自行添加的本地歌曲不会随应用分发。
+应用内置一首背景音乐；自行添加的本地歌曲不会随应用分发。倒计时结束时自动暂停背景音乐。
 
-## 当前限制
+## 桌面版当前限制
 
 - 暂不保存播放列表、时长和窗口位置等设置；置顶选择仅在本次运行内保留。
 - 暂无安装器、自动更新或代码签名。
 - 在开发电脑上验证过主要交互；不同电脑的音频设备、解码支持和显示缩放仍需实际体验。
 
-## 从源码运行
+## 运行电脑版源码
 
 在项目根目录执行：
 
@@ -69,14 +69,24 @@ python -m PyInstaller "stand up.spec"
 
 ## 项目结构
 
-- `work_buddy.py`：Qt 窗口、倒计时、音乐及小窗交互。
-- `assets/app-icon.svg`：可编辑的登山图标源文件。
-- `assets/app-icon.ico`：Windows 多尺寸图标。
-- `assets/gentle-chime.wav`：六音符提示音。
-- `scripts/build_icon.py`、`scripts/build_chime.py`：资源生成脚本，从项目根目录运行。
-- `stand up.spec`：Windows 打包配置。
+日常统一在 `C:\Users\zpw\Desktop\myApps\standUp` 开发。找代码看前两项，找安装包看 `dist/`。
+
+- `work_buddy.py`：电脑版代码，包括倒计时、音乐和小窗交互。
+- `android/`：安卓版代码和构建配置，使用方法见 [安卓说明](docs/ANDROID.md)。
+- `dist/`：本地安装包；当前文件的版本情况见本机的 `dist/README.md`。
+- `archive/releases/`：历史安装包；新归档按版本号分文件夹保存。
+- `assets/`：应用图标、提示音和 Fluent UI 图标资源。
+- `music/`：内置背景音乐、音符记录和音频检查资料。
+- `scripts/`、`stand up.spec`：资源生成与打包脚本、配置。
+- `tests/`：电脑版测试；安卓测试在 `android/app/src/` 下。
+- `.github/workflows/`：各平台的自动构建与发布流程。
+- `docs/`：各平台使用说明和版本记录。
+- `artifacts/`、`build/`：本地截图、检查结果和构建中间文件。
+- `archive/`：历史源码备份、设计与交接材料，仅供追溯。
 
 重新生成图标需要额外安装 Pillow。资源生成脚本使用的 `artifacts` 目录只存放本地预览，不提交到仓库。
+
+本地缓存的清理范围见 [清理记录](docs/CLEANUP.md)。
 
 ## 图标来源与许可
 
@@ -114,6 +124,6 @@ Mac 构建由 `.github/workflows/macos.yml` 手动触发，在两种原生 macOS
 
 ## 自动构建与验证
 
-GitHub Actions 的 Build and publish release 可一次构建 Windows x64、Ubuntu x86_64、macOS arm64 和 macOS x86_64。全部构建和自动检查通过后，才统一发布同一版本并附 SHA256SUMS.txt。
+GitHub Actions 的 Build and publish release 可一次构建 Windows x64、Ubuntu x86_64、macOS arm64、macOS x86_64 和安卓。全部构建和自动检查通过后，才统一发布同一版本并附 SHA256SUMS.txt。
 
 Windows 和 Ubuntu 自动检查包含普通/最大化窗口的小窗切换、恢复以及打包程序启动；macOS 保留原生构建和启动检查。自动检查与人工实测分开记录，不代表所有设备和音频行为均已验证。各版本范围见 [发布说明](docs/releases/)。

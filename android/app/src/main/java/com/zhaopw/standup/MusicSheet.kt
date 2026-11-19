@@ -20,6 +20,7 @@ internal class MusicSheet(private val context:Context,private val library:MusicL
  private val tracks=ui.column()
  val seek=SeekBar(context).apply { tag="music_seek"; max=1000; progressTintList=android.content.res.ColorStateList.valueOf(Palette.brand); progressBackgroundTintList=android.content.res.ColorStateList.valueOf(Palette.soft); thumbTintList=android.content.res.ColorStateList.valueOf(Palette.dark); minimumHeight=ui.dp(48); contentDescription="音乐播放进度" }
  private val modeButtons=mutableListOf<Button>()
+ private var renderedMode:Int?=null
  private var dragging=false
  private var signature=""
  init {
@@ -60,6 +61,8 @@ internal class MusicSheet(private val context:Context,private val library:MusicL
  private fun move(value:Int) { player()?.let { if(it.duration>0) it.seekTo(it.duration*value/1000) } }
  private fun updateModes() {
   val mode=player()?.repeatMode ?: library.mode.coerceIn(0,2)
+  if(renderedMode==mode) return
+  renderedMode=mode
   modeButtons.forEachIndexed { index,button ->
    button.isSelected=index==mode
    button.background=android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(0x222D672F),ui.shape(if(button.isSelected) Palette.soft else Color.TRANSPARENT,12),null)
